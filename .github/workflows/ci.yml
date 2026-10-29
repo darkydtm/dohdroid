@@ -66,7 +66,7 @@ jobs:
         with:
           packages: platform-tools
       - run: sdkmanager "ndk;26.3.11579264"
-      - name: Build Android binary
+      - name: Build Android module
         env:
           TARGET: ${{ matrix.target }}
           LINKER: ${{ matrix.linker }}
@@ -80,69 +80,38 @@ jobs:
           export "CXX_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME++"
           export "AR_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$AR_NAME"
           cargo build --release --target "$TARGET"
-          mkdir -p "artifact/${{ matrix.abi }}/release"
-          cp "target/$TARGET/release/dohd" "artifact/${{ matrix.abi }}/release/dohd"
-          chmod 0755 "artifact/${{ matrix.abi }}/release/dohd"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dohd-${{ matrix.abi }}
-          path: artifact/${{ matrix.abi }}/release/dohd
-          if-no-files-found: error
-
-  package:
-    name: Package Magisk module
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: dohd-*
-          path: target-artifacts
-      - name: Install packaging tools
-        run: sudo apt-get update && sudo apt-get install -y zip
-      - name: Assemble ZIP
-        run: |
-          set -euxo pipefail
-          mkdir -p package/config package/system/bin
+          mkdir -p "package/config" "package/system/bin/${{ matrix.abi }}"
           cp module.prop service.sh uninstall.sh action.sh package/
           cp config/config.toml.example package/config/
-          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
-            binary="$(find "target-artifacts/dohd-$abi" -type f -name dohd -print -quit)"
-            test -n "$binary"
-            mkdir -p "package/system/bin/$abi"
-            cp "$binary" "package/system/bin/$abi/dohd"
-            chmod 0755 "package/system/bin/$abi/dohd"
-          done
-          chmod 0755 package/*.sh
-          find target-artifacts -type f -maxdepth 4 -print
-          (cd package && zip -qr ../doh-dns.zip .)
-          test -s doh-dns.zip
-          sha256sum doh-dns.zip > doh-dns.zip.sha256
+          cp "target/$TARGET/release/dohd" "package/system/bin/${{ matrix.abi }}/dohd"
+          chmod 0755 "package"/*.sh "package/system/bin/${{ matrix.abi }}/dohd"
+          (cd package && zip -qr "../dohd-${{ matrix.abi }}.zip" .)
+          sha256sum "dohd-${{ matrix.abi }}.zip" > "dohd-${{ matrix.abi }}.zip.sha256"
       - uses: actions/upload-artifact@v4
         with:
-          name: dohd-magisk-module
+          name: dohd-module-${{ matrix.abi }}
           path: |
-            doh-dns.zip
-            doh-dns.zip.sha256
+            dohd-${{ matrix.abi }}.zip
+            dohd-${{ matrix.abi }}.zip.sha256
           if-no-files-found: error
 
-  verify-package:
-    name: Verify package
-    needs: package
+  verify-modules:
+    name: Verify ${{ matrix.abi }} module
+    needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dohd-magisk-module
-      - run: |
-          sha256sum -c doh-dns.zip.sha256
-          unzip -l doh-dns.zip
-          for path in \
-            module.prop service.sh uninstall.sh action.sh \
-            system/bin/arm64-v8a/dohd \
-            system/bin/armeabi-v7a/dohd \
-            system/bin/x86_64/dohd \
-            system/bin/x86/dohd; do
-            unzip -l doh-dns.zip | grep -F " $path" >/dev/null
-          done
+          name: dohd-module-${{ matrix.abi }}
+      - name: Verify module contents
+        run: |
+          set -euxo pipefail
+          archive="dohd-${{ matrix.abi }}.zip"
+          sha256sum -c "$archive.sha256"
+          unzip -l "$archive"
+          unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/dohd"
+          ! unzip -Z1 "$archive" | grep -E '^system/bin/(arm64-v8a|armeabi-v7a|x86_64|x86)/dohd$' | grep -vFx "system/bin/${{ matrix.abi }}/dohd"
