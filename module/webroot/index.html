@@ -68,6 +68,7 @@
 		.metric-label { margin-top: 7px; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-typescale-label); }
 		.log { margin-top: 20px; padding: 16px 20px; border-radius: var(--md-sys-shape-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface-variant); font-family: monospace; font-size: .75rem; line-height: 1.8; }
 		.log strong { color: var(--md-sys-color-primary); font-weight: 400; }
+		.build-info { margin-top: 20px; color: var(--md-sys-color-outline); font: .7rem monospace; overflow-wrap: anywhere; }
 		@media (max-width: 760px) { .main { width: min(100% - 32px, 620px); padding-top: 20px; } .content { grid-template-columns: 1fr; } }
 	</style>
 </head>
@@ -79,9 +80,12 @@
 				<section class="card"><div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div><div class="metrics"><div class="metric"><div class="metric-value" id="queries">-</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value" id="errors">-</div><div class="metric-label">Errors</div></div></div><div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div></section>
 			</section>
 			<div class="log" id="log"></div>
+			<footer class="build-info" id="buildInfo">Build: unknown</footer>
 		</main>
 	</div>
+	<script src="build-info.js"></script>
 	<script>
+		if (window.buildInfo) document.querySelector('#buildInfo').textContent = `Build: ${window.buildInfo.branch} @ ${window.buildInfo.commit}`;
 		const log = document.querySelector('#log');
 		const url = document.querySelector('#resolverUrl');
 		const timeout = document.querySelector('#timeout');
