@@ -42,6 +42,7 @@ jobs:
       - run: sh tests/install-permissions.test.sh
       - run: sh tests/private-dns.test.sh
       - run: sh tests/process.test.sh
+      - run: sh tests/tun-firewall.test.sh
 
   build:
     name: Build ${{ matrix.abi }}
