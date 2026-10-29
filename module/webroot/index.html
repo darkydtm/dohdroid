@@ -102,7 +102,7 @@
 					if (code !== 0) { reject(new Error(stderr || 'Daemon is unavailable')); return; }
 					try { const response = JSON.parse(stdout); if (!response.ok) throw new Error(response.error_code || 'Request rejected'); resolve(response.result); } catch (error) { reject(error); }
 				};
-				try { ksu.exec(`/data/adb/modules/doh-dns/scripts/webui.sh ${quoted}`, '{}', callback); } catch (error) { delete window[callback]; reject(error); }
+				try { ksu.exec(`sh /data/adb/modules/doh-dns/scripts/webui.sh ${quoted}`, '{}', callback); } catch (error) { delete window[callback]; reject(error); }
 			});
 		}
 		function validate() {
