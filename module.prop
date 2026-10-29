@@ -3,4 +3,4 @@ name = "DoH DNS"
 version = "0.1.0"
 versionCode = 1
 author = "dohdroid"
-description = "Local DNS-over-HTTPS proxy"
+description=Rust DoH DNS proxy. Action button toggles DNS redirect on/off. Uses UDP/TCP DNS on loopback and HTTPS DoH resolvers.
