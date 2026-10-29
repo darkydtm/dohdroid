@@ -12,7 +12,9 @@ impl DohClient {
         for resolver in resolvers.iter().filter(|resolver| resolver.enabled) {
             let url = url::Url::parse(&resolver.url)?;
             let host = url.host_str().context("resolver host missing")?;
-            let port = url.port_or_known_default().context("resolver port missing")?;
+            let port = url
+                .port_or_known_default()
+                .context("resolver port missing")?;
             let addresses: Vec<_> = (host, port).to_socket_addrs()?.collect();
             if addresses.is_empty() {
                 anyhow::bail!("resolver hostname has no addresses: {host}");
