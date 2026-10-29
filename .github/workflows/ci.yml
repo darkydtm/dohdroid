@@ -52,24 +52,32 @@ jobs:
         include:
           - abi: arm64-v8a
             target: aarch64-linux-android
+            sing_arch: arm64
+            sing_sha: fb3a6c5197f4044f82c8fd75e01ce14c28b6abdd4c3df84bb987d41a962a320f
             linker: aarch64-linux-android24-clang
             cc: aarch64-linux-android24-clang
             ar: llvm-ar
             cargo_target: AARCH64_LINUX_ANDROID
           - abi: armeabi-v7a
             target: armv7-linux-androideabi
+            sing_arch: arm
+            sing_sha: a89f48c4f2691bf37476308212175ba7b7315db5ca03c0bf9b20d15f26bc70e9
             linker: armv7a-linux-androideabi24-clang
             cc: armv7a-linux-androideabi24-clang
             ar: llvm-ar
             cargo_target: ARMV7_LINUX_ANDROIDEABI
           - abi: x86_64
             target: x86_64-linux-android
+            sing_arch: amd64
+            sing_sha: e72a8eead1ace9ce84a4ed07dfbf364e87562b736463fc00967b845cf9b3b8ac
             linker: x86_64-linux-android24-clang
             cc: x86_64-linux-android24-clang
             ar: llvm-ar
             cargo_target: X86_64_LINUX_ANDROID
           - abi: x86
             target: i686-linux-android
+            sing_arch: '386'
+            sing_sha: 6b715f5ee3d1ad1738da99e7c207db807a06560f623a2a44105dd3c34339fd93
             linker: i686-linux-android24-clang
             cc: i686-linux-android24-clang
             ar: llvm-ar
@@ -106,14 +114,19 @@ jobs:
           export "CXX_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME++"
           export "AR_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$AR_NAME"
           cargo build --manifest-path daemon/Cargo.toml --release --target "$TARGET"
+          curl -fsSL --retry 3 -o sing-box.tar.gz "https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-android-${{ matrix.sing_arch }}.tar.gz"
+          echo '${{ matrix.sing_sha }}  sing-box.tar.gz' | sha256sum -c -
+          mkdir sing-box-dist
+          tar -xzf sing-box.tar.gz -C sing-box-dist --strip-components=1
           mkdir -p "module/package/config" "module/package/system/bin/${{ matrix.abi }}"
           cp module/module.prop module/service.sh module/uninstall.sh module/action.sh module/customize.sh module/package/
-          cp module/config/config.toml.example module/package/config/
+          cp module/config/config.toml.example module/config/tun.json module/package/config/
           cp -R module/scripts module/package/scripts
           cp -R module/webroot module/package/webroot
           sh scripts/build-info.sh module/package/webroot
           cp "daemon/target/$TARGET/release/dohd" "module/package/system/bin/${{ matrix.abi }}/dohd"
-          chmod 0755 "module/package"/*.sh "module/package/system/bin/${{ matrix.abi }}/dohd"
+          cp sing-box-dist/sing-box "module/package/system/bin/${{ matrix.abi }}/sing-box"
+          chmod 0755 "module/package"/*.sh "module/package/system/bin/${{ matrix.abi }}/"*
           chmod 0755 module/package/scripts/*.sh
           (cd module/package && zip -qr "../../dohd-${{ matrix.abi }}.zip" .)
           sha256sum "dohd-${{ matrix.abi }}.zip" > "dohd-${{ matrix.abi }}.zip.sha256"
@@ -149,4 +162,7 @@ jobs:
           unzip -Z1 "$archive" | grep -Fx 'webroot/index.html'
           unzip -Z1 "$archive" | grep -Fx 'webroot/build-info.js'
           unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/dohd"
+          unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/sing-box"
+          unzip -Z1 "$archive" | grep -Fx 'config/tun.json'
+          unzip -Z1 "$archive" | grep -Fx 'scripts/tun-firewall.sh'
           ! unzip -Z1 "$archive" | grep -E '^system/bin/(arm64-v8a|armeabi-v7a|x86_64|x86)/dohd$' | grep -vFx "system/bin/${{ matrix.abi }}/dohd"
