@@ -2,12 +2,14 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 for abi in arm64-v8a armeabi-v7a x86_64 x86; do
-	OUT="$ROOT/package-$abi"
+	OUT="$ROOT/module/package-$abi"
 	rm -rf "$OUT"
 	mkdir -p "$OUT/config" "$OUT/system/bin/$abi"
-	cp "$ROOT/module.prop" "$ROOT/service.sh" "$ROOT/uninstall.sh" "$ROOT/action.sh" "$OUT/"
-	cp "$ROOT/config/config.toml.example" "$OUT/config/"
-	binary="$ROOT/target/$abi/release/dohd"
+	cp "$ROOT/module/module.prop" "$ROOT/module/service.sh" "$ROOT/module/uninstall.sh" "$ROOT/module/action.sh" "$OUT/"
+	cp "$ROOT/module/config/config.toml.example" "$OUT/config/"
+	cp -R "$ROOT/module/scripts" "$OUT/scripts"
+	chmod 0755 "$OUT/scripts/"*.sh
+	binary="$ROOT/daemon/target/$abi/release/dohd"
 	[ -x "$binary" ] || { echo "missing binary: $binary" >&2; exit 1; }
 	cp "$binary" "$OUT/system/bin/$abi/dohd"
 	chmod 0755 "$OUT/system/bin/$abi/dohd"
