@@ -4,7 +4,7 @@ connect_timeout_ms = 3000
 request_timeout_ms = 5000
 cache_enabled = true
 cache_capacity = 4096
-fallback_mode = "System"
+fallback_mode = "system"
 
 [[resolvers]]
 name = "cloudflare"
