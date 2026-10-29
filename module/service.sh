@@ -13,11 +13,23 @@ case "$(uname -m)" in
 esac
 BINARY="$MODDIR/system/bin/$ABI/dohd"
 [ -x "$BINARY" ] || { echo "Missing daemon for ABI: $ABI" >&2; exit 1; }
-DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$MODDIR/run/dohd.sock" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
-echo $! > "$PIDFILE"
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-	[ -S "$MODDIR/run/dohd.sock" ] && break
-	sleep 1
+(
+while [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ]; do
+	rm -f "$MODDIR/run/dohd.sock"
+	DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$MODDIR/run/dohd.sock" "$BINARY" >>"$MODDIR/run/dohd.log" 2>&1 &
+	pid=$!
+	echo "$pid" > "$PIDFILE"
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		[ -S "$MODDIR/run/dohd.sock" ] && break
+		kill -0 "$pid" 2>/dev/null || break
+		sleep 1
+	done
+	if [ -S "$MODDIR/run/dohd.sock" ]; then
+		"$MODDIR/scripts/firewall.sh" install || true
+	fi
+	wait "$pid" || true
+	"$MODDIR/scripts/firewall.sh" remove || true
+	rm -f "$PIDFILE" "$MODDIR/run/dohd.sock"
+	sleep 5
 done
-[ -S "$MODDIR/run/dohd.sock" ] || exit 1
-"$MODDIR/scripts/firewall.sh" install
+) </dev/null >/dev/null 2>&1 &
