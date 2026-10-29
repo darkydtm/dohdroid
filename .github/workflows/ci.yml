@@ -22,6 +22,7 @@ jobs:
       - run: bash -n module/service.sh module/uninstall.sh module/action.sh module/customize.sh package.sh module/scripts/*.sh
       - run: node tests/webui-permission.test.js
       - run: sh tests/install-permissions.test.sh
+      - run: sh tests/tun-firewall.test.sh
 
   build:
     name: Build ${{ matrix.abi }}

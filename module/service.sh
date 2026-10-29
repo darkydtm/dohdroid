@@ -26,7 +26,10 @@ while [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ]; do
 	done
 	if [ -S "$MODDIR/run/dohd.sock" ]; then
 		if [ -f "$MODDIR/config/tun-enabled" ]; then
-			"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/config/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
+			port=$(awk -F= '/^[[:space:]]*listen_port[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$MODDIR/config/config.toml")
+			case "$port" in ''|*[!0-9]*) port=5353 ;; esac
+			sed "s/\"server_port\": 5353/\"server_port\": $port/" "$MODDIR/config/tun.json" > "$MODDIR/run/tun.json"
+			"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/run/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
 			tun_pid=$!
 			echo "$tun_pid" > "$MODDIR/run/tun.pid"
 			for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -34,7 +37,7 @@ while [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ]; do
 				kill -0 "$tun_pid" 2>/dev/null || break
 				sleep 1
 			done
-			if ! kill -0 "$tun_pid" 2>/dev/null || ! "$MODDIR/scripts/tun-firewall.sh" install; then
+			if ! kill -0 "$tun_pid" 2>/dev/null || ! /system/bin/ip link show dohdtun0 >/dev/null 2>&1 || ! "$MODDIR/scripts/tun-firewall.sh" install; then
 				kill "$tun_pid" 2>/dev/null || true
 				kill "$pid" 2>/dev/null || true
 			fi
