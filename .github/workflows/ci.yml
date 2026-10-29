@@ -19,7 +19,9 @@ jobs:
       - run: cargo fmt --manifest-path daemon/Cargo.toml --check
       - run: cargo test --manifest-path daemon/Cargo.toml
       - run: cargo clippy --manifest-path daemon/Cargo.toml --all-targets --all-features -- -D warnings
-      - run: bash -n module/service.sh module/uninstall.sh module/action.sh package.sh module/scripts/*.sh
+      - run: bash -n module/service.sh module/uninstall.sh module/action.sh module/customize.sh package.sh module/scripts/*.sh
+      - run: node tests/webui-permission.test.js
+      - run: sh tests/install-permissions.test.sh
 
   build:
     name: Build ${{ matrix.abi }}
@@ -81,7 +83,7 @@ jobs:
           export "AR_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$AR_NAME"
           cargo build --manifest-path daemon/Cargo.toml --release --target "$TARGET"
           mkdir -p "module/package/config" "module/package/system/bin/${{ matrix.abi }}"
-          cp module/module.prop module/service.sh module/uninstall.sh module/action.sh module/package/
+          cp module/module.prop module/service.sh module/uninstall.sh module/action.sh module/customize.sh module/package/
           cp module/config/config.toml.example module/package/config/
           cp -R module/scripts module/package/scripts
           cp -R module/webroot module/package/webroot
@@ -118,6 +120,7 @@ jobs:
           unzip -l "$archive"
           unzip -Z1 "$archive" | grep -Fx 'scripts/firewall.sh'
           unzip -Z1 "$archive" | grep -Fx 'scripts/webui.sh'
+          unzip -Z1 "$archive" | grep -Fx 'customize.sh'
           unzip -Z1 "$archive" | grep -Fx 'webroot/index.html'
           unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/dohd"
           ! unzip -Z1 "$archive" | grep -E '^system/bin/(arm64-v8a|armeabi-v7a|x86_64|x86)/dohd$' | grep -vFx "system/bin/${{ matrix.abi }}/dohd"
