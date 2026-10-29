@@ -70,8 +70,9 @@ jobs:
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/26.3.11579264"
           export CARGO_TARGET_${{ matrix.cargo_target }}_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$LINKER"
-          export CC_${{ matrix.target }}="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME"
-          export CXX_${{ matrix.target }}="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME++"
+          target_env="${TARGET//-/_}"
+          export "CC_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME"
+          export "CXX_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME++"
           cargo build --release --target "$TARGET"
           mkdir -p "artifact/${{ matrix.abi }}/release"
           cp "target/$TARGET/release/dohd" "artifact/${{ matrix.abi }}/release/dohd"
