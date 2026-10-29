@@ -76,7 +76,7 @@
 	<div class="app">
 		<main class="main">
 			<section class="content">
-				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><span class="error" id="resolverError" role="alert"></span></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button><button class="tonal" id="restartButton">Restart daemon</button></div></div></section>
+				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" list="resolverHistory" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><datalist id="resolverHistory"></datalist><span class="error" id="resolverError" role="alert"></span></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button><button class="tonal" id="restartButton">Restart daemon</button></div></div></section>
 				<section class="card"><div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div><div class="metrics"><div class="metric"><div class="metric-value" id="queries">-</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value" id="errors">-</div><div class="metric-label">Errors</div></div></div><div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div></section>
 			</section>
 			<div class="log" id="log"></div>
@@ -90,6 +90,14 @@
 		const url = document.querySelector('#resolverUrl');
 		const timeout = document.querySelector('#timeout');
 		const fallback = document.querySelector('#fallback');
+		const history = document.querySelector('#resolverHistory');
+		function showHistory(config) {
+			history.replaceChildren(...(config.resolver_history || []).map((value) => {
+				const option = document.createElement('option');
+				option.value = value;
+				return option;
+			}));
+		}
 		const resolverError = document.querySelector('#resolverError');
 		const timeoutError = document.querySelector('#timeoutError');
 		const addLog = (message) => { const line = document.createElement('div'); line.textContent = `${new Date().toLocaleTimeString('en-GB')} ${message}`; log.append(line); log.scrollTop = log.scrollHeight; };
@@ -140,6 +148,7 @@
 				document.querySelector('#errors').textContent = status.errors;
 				const resolver = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
 				if (resolver) url.value = resolver.url;
+				showHistory(config);
 				timeout.value = `${config.request_timeout_ms} ms`;
 				fallback.value = config.fallback_mode;
 				validate();
@@ -152,10 +161,12 @@
 				const config = await request('get_config');
 				const active = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
 				if (!active) throw new Error('No resolver configured');
+				if (active.url !== url.value.trim()) active.bootstrap_ips = [];
 				active.url = url.value.trim();
 				config.request_timeout_ms = Number.parseInt(timeout.value, 10);
 				config.fallback_mode = fallback.value;
 				await request('put_config', config);
+				showHistory(await request('get_config'));
 				await restartDaemon();
 				addLog('configuration saved and daemon restarted');
 			} catch (error) { showError(error.message); }

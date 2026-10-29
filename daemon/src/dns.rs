@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, UdpSocket};
 
-use crate::config::FallbackMode;
+use crate::config::{ConfigStore, FallbackMode, ResolverConfig};
 use crate::resolver::ResolverPool;
 
 pub const MAX_DNS_PACKET: usize = 4096;
@@ -17,16 +17,18 @@ pub trait DnsHandler: Send + Sync {
 }
 
 pub struct DohHandler {
-    pool: Mutex<ResolverPool>,
-    fallback: FallbackMode,
+    config: ConfigStore,
+    pool: Mutex<(Vec<ResolverConfig>, FallbackMode, ResolverPool)>,
 }
 
 impl DohHandler {
-    pub fn new(pool: ResolverPool, fallback: FallbackMode) -> Self {
-        Self {
-            pool: Mutex::new(pool),
-            fallback,
-        }
+    pub fn new(config: ConfigStore) -> Result<Self> {
+        let initial = config.snapshot();
+        let pool = ResolverPool::new(initial.resolvers.clone())?;
+        Ok(Self {
+            config,
+            pool: Mutex::new((initial.resolvers, initial.fallback_mode, pool)),
+        })
     }
 }
 
@@ -34,7 +36,16 @@ impl DohHandler {
 impl DnsHandler for DohHandler {
     async fn handle(&self, query: Vec<u8>) -> Result<Vec<u8>> {
         let mut pool = self.pool.lock().await;
-        pool.resolve(&query, &self.fallback).await
+        let config = self.config.snapshot();
+        if pool.0 != config.resolvers || pool.1 != config.fallback_mode {
+            *pool = (
+                config.resolvers.clone(),
+                config.fallback_mode,
+                ResolverPool::new(config.resolvers)?,
+            );
+        }
+        let (_, fallback, resolver) = &mut *pool;
+        resolver.resolve(&query, fallback).await
     }
 }
 
@@ -54,7 +65,13 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
             if size == 0 {
                 continue;
             }
-            let response: Vec<u8> = self.handler.handle(buffer[..size].to_vec()).await?;
+            let response = match self.handler.handle(buffer[..size].to_vec()).await {
+                Ok(response) => response,
+                Err(error) => {
+                    tracing::warn!(%error, "DNS query failed");
+                    continue;
+                }
+            };
             if response.len() <= MAX_DNS_PACKET {
                 socket.send_to(&response, peer).await?;
             }
