@@ -13,7 +13,6 @@ iptables_mode() {
 		install)
 			"$backend" -t nat -N "$CHAIN" 2>/dev/null || true
 			"$backend" -t nat -F "$CHAIN"
-			"$backend" -t nat -A "$CHAIN" -m owner --uid-owner "$(id -u)" -j RETURN 2>/dev/null || true
 			"$backend" -t nat -A "$CHAIN" -p udp --dport 53 -j REDIRECT --to-ports "$PORT"
 			"$backend" -t nat -A "$CHAIN" -p tcp --dport 53 -j REDIRECT --to-ports "$PORT"
 			"$backend" -t nat -C OUTPUT -j "$CHAIN" 2>/dev/null || "$backend" -t nat -A OUTPUT -j "$CHAIN"

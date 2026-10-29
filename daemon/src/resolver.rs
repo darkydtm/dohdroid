@@ -12,7 +12,7 @@ pub struct ResolverPool {
 impl ResolverPool {
     pub fn new(resolvers: Vec<ResolverConfig>) -> Result<Self> {
         Ok(Self {
-            client: DohClient::new()?,
+            client: DohClient::new(&resolvers)?,
             resolvers: resolvers.into_iter().map(|r| (r, None)).collect(),
         })
     }
