@@ -88,7 +88,7 @@
 		const fallback = document.querySelector('#fallback');
 		const resolverError = document.querySelector('#resolverError');
 		const timeoutError = document.querySelector('#timeoutError');
-		const addLog = (message) => { const line = document.createElement('div'); line.textContent = `${new Date().toLocaleTimeString('en-GB')} ${message}`; log.prepend(line); };
+		const addLog = (message) => { const line = document.createElement('div'); line.textContent = `${new Date().toLocaleTimeString('en-GB')} ${message}`; log.append(line); log.scrollTop = log.scrollHeight; };
 		const showError = (message) => addLog(`error: ${message}`);
 		let callbackId = 0;
 		function request(operation, config) {
