@@ -23,7 +23,9 @@ iptables_mode() {
 			"$backend" -t nat -F "$CHAIN" 2>/dev/null || true
 			"$backend" -t nat -X "$CHAIN" 2>/dev/null || true
 			;;
-		status) "$backend" -t nat -L "$CHAIN" >/dev/null 2>&1 ;;
+		status)
+			"$backend" -t nat -L "$CHAIN" >/dev/null 2>&1
+			;;
 		*) exit 2 ;;
 	esac
 }
