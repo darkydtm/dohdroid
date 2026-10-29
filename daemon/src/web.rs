@@ -34,7 +34,7 @@ pub fn router(state: WebState) -> Router {
 }
 
 async fn index() -> Html<&'static str> {
-    Html(include_str!("../webui-prototype.html"))
+    Html(include_str!("../../webui-prototype.html"))
 }
 
 async fn status(State(state): State<WebState>) -> Json<Value> {

@@ -16,10 +16,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy,rustfmt
-      - run: cargo fmt --check
-      - run: cargo test
-      - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: bash -n service.sh uninstall.sh action.sh package.sh scripts/*.sh
+      - run: cargo fmt --manifest-path daemon/Cargo.toml --check
+      - run: cargo test --manifest-path daemon/Cargo.toml
+      - run: cargo clippy --manifest-path daemon/Cargo.toml --all-targets --all-features -- -D warnings
+      - run: bash -n module/service.sh module/uninstall.sh module/action.sh package.sh module/scripts/*.sh
 
   build:
     name: Build ${{ matrix.abi }}
@@ -79,13 +79,15 @@ jobs:
           export "CC_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME"
           export "CXX_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME++"
           export "AR_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$AR_NAME"
-          cargo build --release --target "$TARGET"
-          mkdir -p "package/config" "package/system/bin/${{ matrix.abi }}"
-          cp module.prop service.sh uninstall.sh action.sh package/
-          cp config/config.toml.example package/config/
-          cp "target/$TARGET/release/dohd" "package/system/bin/${{ matrix.abi }}/dohd"
-          chmod 0755 "package"/*.sh "package/system/bin/${{ matrix.abi }}/dohd"
-          (cd package && zip -qr "../dohd-${{ matrix.abi }}.zip" .)
+          cargo build --manifest-path daemon/Cargo.toml --release --target "$TARGET"
+          mkdir -p "module/package/config" "module/package/system/bin/${{ matrix.abi }}"
+          cp module/module.prop module/service.sh module/uninstall.sh module/action.sh module/package/
+          cp module/config/config.toml.example module/package/config/
+          cp -R module/scripts module/package/scripts
+          cp "daemon/target/$TARGET/release/dohd" "module/package/system/bin/${{ matrix.abi }}/dohd"
+          chmod 0755 "module/package"/*.sh "module/package/system/bin/${{ matrix.abi }}/dohd"
+          chmod 0755 module/package/scripts/*.sh
+          (cd module/package && zip -qr "../../dohd-${{ matrix.abi }}.zip" .)
           sha256sum "dohd-${{ matrix.abi }}.zip" > "dohd-${{ matrix.abi }}.zip.sha256"
       - uses: actions/upload-artifact@v4
         with:
@@ -113,5 +115,6 @@ jobs:
           archive="dohd-${{ matrix.abi }}.zip"
           sha256sum -c "$archive.sha256"
           unzip -l "$archive"
+          unzip -Z1 "$archive" | grep -Fx 'scripts/firewall.sh'
           unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/dohd"
           ! unzip -Z1 "$archive" | grep -E '^system/bin/(arm64-v8a|armeabi-v7a|x86_64|x86)/dohd$' | grep -vFx "system/bin/${{ matrix.abi }}/dohd"

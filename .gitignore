@@ -1,3 +1,6 @@
 /target/
-/package/
+/module/package/
+/module/package-*/
 *.zip
+
+/daemon/target/
