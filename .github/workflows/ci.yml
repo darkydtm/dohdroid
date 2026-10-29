@@ -84,6 +84,7 @@ jobs:
           cp module/module.prop module/service.sh module/uninstall.sh module/action.sh module/package/
           cp module/config/config.toml.example module/package/config/
           cp -R module/scripts module/package/scripts
+          cp -R module/webroot module/package/webroot
           cp "daemon/target/$TARGET/release/dohd" "module/package/system/bin/${{ matrix.abi }}/dohd"
           chmod 0755 "module/package"/*.sh "module/package/system/bin/${{ matrix.abi }}/dohd"
           chmod 0755 module/package/scripts/*.sh
@@ -116,5 +117,7 @@ jobs:
           sha256sum -c "$archive.sha256"
           unzip -l "$archive"
           unzip -Z1 "$archive" | grep -Fx 'scripts/firewall.sh'
+          unzip -Z1 "$archive" | grep -Fx 'scripts/webui.sh'
+          unzip -Z1 "$archive" | grep -Fx 'webroot/index.html'
           unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/dohd"
           ! unzip -Z1 "$archive" | grep -E '^system/bin/(arm64-v8a|armeabi-v7a|x86_64|x86)/dohd$' | grep -vFx "system/bin/${{ matrix.abi }}/dohd"
