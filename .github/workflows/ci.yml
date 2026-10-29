@@ -99,8 +99,11 @@ jobs:
         with:
           pattern: dohd-*
           path: target-artifacts
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y zip
       - name: Assemble ZIP
         run: |
+          set -euxo pipefail
           mkdir -p package/config package/system/bin
           cp module.prop service.sh uninstall.sh action.sh package/
           cp config/config.toml.example package/config/
@@ -111,7 +114,9 @@ jobs:
             chmod 0755 "package/system/bin/$abi/dohd"
           done
           chmod 0755 package/*.sh
+          find target-artifacts -type f -maxdepth 4 -print
           (cd package && zip -qr ../doh-dns.zip .)
+          test -s doh-dns.zip
           sha256sum doh-dns.zip > doh-dns.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
