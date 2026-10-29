@@ -62,7 +62,10 @@ if ! private_dns_disable; then
 	exit 1
 fi
 if [ -f "$MODDIR/config/tun-enabled" ]; then
-	"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/config/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
+	port=$(awk -F= '/^[[:space:]]*listen_port[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$MODDIR/config/config.toml")
+	case "$port" in ''|*[!0-9]*) port=5353 ;; esac
+	sed "s/\"server_port\": 5353/\"server_port\": $port/" "$MODDIR/config/tun.json" > "$MODDIR/run/tun.json"
+	"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/run/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
 	tun_pid=$!
 	echo "$tun_pid" > "$MODDIR/run/tun.pid"
 	for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -70,7 +73,7 @@ if [ -f "$MODDIR/config/tun-enabled" ]; then
 		kill -0 "$tun_pid" 2>/dev/null || break
 		sleep 1
 	done
-	if ! kill -0 "$tun_pid" 2>/dev/null || ! "$TUN_FIREWALL" install; then
+	if ! kill -0 "$tun_pid" 2>/dev/null || ! /system/bin/ip link show dohdtun0 >/dev/null 2>&1 || ! "$TUN_FIREWALL" install; then
 		"$TUN_FIREWALL" remove || true
 		kill "$tun_pid" 2>/dev/null || true
 		rm -f "$MODDIR/run/tun.pid"
