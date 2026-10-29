@@ -75,7 +75,7 @@
 	<div class="app">
 		<main class="main">
 			<section class="content">
-				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><span class="error" id="resolverError" role="alert"></span></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button></div></div></section>
+				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><span class="error" id="resolverError" role="alert"></span></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button><button class="tonal" id="restartButton">Restart daemon</button></div></div></section>
 				<section class="card"><div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div><div class="metrics"><div class="metric"><div class="metric-value" id="queries">-</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value" id="errors">-</div><div class="metric-label">Errors</div></div></div><div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div></section>
 			</section>
 			<div class="log" id="log"></div>
@@ -103,6 +103,17 @@
 					try { const response = JSON.parse(stdout); if (!response.ok) throw new Error(response.error_code || 'Request rejected'); resolve(response.result); } catch (error) { reject(error); }
 				};
 				try { ksu.exec(`sh /data/adb/modules/doh-dns/scripts/webui.sh ${quoted}`, '{}', callback); } catch (error) { delete window[callback]; reject(error); }
+			});
+		}
+		function restartDaemon() {
+			return new Promise((resolve, reject) => {
+				const callback = `dohdCallback${callbackId++}`;
+				window[callback] = (code, stdout, stderr) => {
+					delete window[callback];
+					if (code !== 0) reject(new Error(stderr || 'Daemon restart failed'));
+					else resolve();
+				};
+				try { ksu.exec('sh /data/adb/modules/doh-dns/service.sh', '{}', callback); } catch (error) { delete window[callback]; reject(error); }
 			});
 		}
 		function validate() {
@@ -141,17 +152,12 @@
 				config.request_timeout_ms = Number.parseInt(timeout.value, 10);
 				config.fallback_mode = fallback.value;
 				await request('put_config', config);
-				await new Promise((resolve, reject) => {
-					const callback = `dohdCallback${callbackId++}`;
-					window[callback] = (code, stdout, stderr) => {
-						delete window[callback];
-						if (code !== 0) reject(new Error(stderr || 'Daemon restart failed'));
-						else resolve();
-					};
-					try { ksu.exec('sh /data/adb/modules/doh-dns/service.sh', '{}', callback); } catch (error) { delete window[callback]; reject(error); }
-				});
+				await restartDaemon();
 				addLog('configuration saved and daemon restarted');
 			} catch (error) { showError(error.message); }
+		});
+		document.querySelector('#restartButton').addEventListener('click', async () => {
+			try { await restartDaemon(); addLog('daemon restarted'); await loadState(); } catch (error) { showError(error.message); }
 		});
 		document.querySelector('#testButton').addEventListener('click', async () => {
 			if (!validate()) return;
