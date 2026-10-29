@@ -2,6 +2,9 @@
 set -eu
 MODDIR=${0%/*}
 PIDFILE="$MODDIR/run/dohd.pid"
+SOCKET="$MODDIR/run/dohd.sock"
+FIREWALL="$MODDIR/scripts/firewall.sh"
+. "$MODDIR/scripts/private-dns.sh"
 mkdir -p "$MODDIR/run" "$MODDIR/config"
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 case "$(uname -m)" in
@@ -13,11 +16,38 @@ case "$(uname -m)" in
 esac
 BINARY="$MODDIR/system/bin/$ABI/dohd"
 [ -x "$BINARY" ] || { echo "Missing daemon for ABI: $ABI" >&2; exit 1; }
-DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$MODDIR/run/dohd.sock" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
-echo $! > "$PIDFILE"
+"$FIREWALL" remove
+if [ -f "$PIDFILE" ]; then
+	pid=$(cat "$PIDFILE")
+	case "$pid" in *[!0-9]*|'') exit 1 ;; esac
+	if [ "$(readlink "/proc/$pid/exe" 2>/dev/null || true)" = "$BINARY" ]; then
+		kill "$pid" || exit 1
+		for _ in 1 2 3 4 5; do
+			kill -0 "$pid" 2>/dev/null || break
+			sleep 1
+		done
+		kill -0 "$pid" 2>/dev/null && exit 1
+	fi
+fi
+rm -f "$SOCKET" "$PIDFILE"
+private_dns_restore || exit 1
+DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
+pid=$!
+echo "$pid" > "$PIDFILE"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
-	[ -S "$MODDIR/run/dohd.sock" ] && break
+	[ -S "$SOCKET" ] && break
+	kill -0 "$pid" 2>/dev/null || break
 	sleep 1
 done
-[ -S "$MODDIR/run/dohd.sock" ] || exit 1
-"$MODDIR/scripts/firewall.sh" install
+if [ ! -S "$SOCKET" ]; then
+	kill "$pid" 2>/dev/null || true
+	rm -f "$PIDFILE"
+	echo "Daemon failed to start; check $MODDIR/run/dohd.log" >&2
+	exit 1
+fi
+if ! private_dns_disable || ! "$FIREWALL" install; then
+	"$FIREWALL" remove || true
+	private_dns_restore || true
+	kill "$pid" 2>/dev/null || true
+	exit 1
+fi

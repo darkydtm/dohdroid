@@ -2,7 +2,6 @@
 set -eu
 MODDIR=${0%/*}
 FIREWALL="$MODDIR/scripts/firewall.sh"
-SOCKET="$MODDIR/run/dohd.sock"
 MODULE_PROP="$MODDIR/module.prop"
 CONFIG="$MODDIR/config/config.toml"
 
@@ -28,15 +27,16 @@ update_description() {
 
 if "$FIREWALL" status >/dev/null 2>&1; then
 	"$FIREWALL" remove
+	. "$MODDIR/scripts/private-dns.sh"
+	private_dns_restore
 	update_description "OFF"
 	echo "DoH DNS disabled"
 else
-	[ -S "$SOCKET" ] || {
+	if ! sh "$MODDIR/service.sh"; then
 		update_description "ERROR"
-		echo "DoH DNS daemon is not ready" >&2
+		echo "DoH DNS daemon failed to start" >&2
 		exit 1
-	}
-	"$FIREWALL" install
+	fi
 	update_description "ON"
 	echo "DoH DNS enabled"
 fi

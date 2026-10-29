@@ -141,7 +141,16 @@
 				config.request_timeout_ms = Number.parseInt(timeout.value, 10);
 				config.fallback_mode = fallback.value;
 				await request('put_config', config);
-				addLog('configuration saved; restart the daemon to apply changes');
+				await new Promise((resolve, reject) => {
+					const callback = `dohdCallback${callbackId++}`;
+					window[callback] = (code, stdout, stderr) => {
+						delete window[callback];
+						if (code !== 0) reject(new Error(stderr || 'Daemon restart failed'));
+						else resolve();
+					};
+					try { ksu.exec('sh /data/adb/modules/doh-dns/service.sh', '{}', callback); } catch (error) { delete window[callback]; reject(error); }
+				});
+				addLog('configuration saved and daemon restarted');
 			} catch (error) { showError(error.message); }
 		});
 		document.querySelector('#testButton').addEventListener('click', async () => {

@@ -8,4 +8,6 @@ if [ -f "$PIDFILE" ]; then
 	rm -f "$PIDFILE"
 fi
 "$MODDIR/scripts/firewall.sh" remove 2>/dev/null || true
+. "$MODDIR/scripts/private-dns.sh"
+private_dns_restore || true
 rm -f "$SOCKET"
