@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum FallbackMode {
     #[default]
     System,

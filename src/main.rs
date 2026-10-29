@@ -4,9 +4,29 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex},
 };
+use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let args: Vec<String> = env::args().collect();
+    if args.get(1).map(String::as_str) == Some("control") {
+        let socket = args
+            .get(2)
+            .ok_or_else(|| anyhow::anyhow!("socket path is required"))?;
+        let stream = tokio::net::UnixStream::connect(socket).await?;
+        let (reader, mut writer) = stream.into_split();
+        let mut input = BufReader::new(io::stdin()).lines();
+        let mut output = BufReader::new(reader).lines();
+        while let Some(line) = input.next_line().await? {
+            writer.write_all(line.as_bytes()).await?;
+            writer.write_all(b"\n").await?;
+            if let Some(response) = output.next_line().await? {
+                println!("{response}");
+            }
+        }
+        return Ok(());
+    }
+
     tracing_subscriber::fmt::init();
     let config_path = env::var_os("DOHD_CONFIG")
         .map(PathBuf::from)
