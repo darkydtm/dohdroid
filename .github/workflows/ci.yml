@@ -108,7 +108,7 @@ jobs:
           cp module.prop service.sh uninstall.sh action.sh package/
           cp config/config.toml.example package/config/
           for abi in arm64-v8a armeabi-v7a x86_64 x86; do
-            binary="$(find "target-artifacts/dohd-$abi" -type f -name dohd -perm -111 -print -quit)"
+            binary="$(find "target-artifacts/dohd-$abi" -type f -name dohd -print -quit)"
             test -n "$binary"
             mkdir -p "package/system/bin/$abi"
             cp "$binary" "package/system/bin/$abi/dohd"
