@@ -23,6 +23,7 @@ jobs:
       - run: node tests/webui-permission.test.js
       - run: sh tests/install-permissions.test.sh
       - run: sh tests/private-dns.test.sh
+      - run: sh tests/process.test.sh
 
   build:
     name: Build ${{ matrix.abi }}

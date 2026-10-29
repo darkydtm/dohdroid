@@ -5,6 +5,7 @@ PIDFILE="$MODDIR/run/dohd.pid"
 SOCKET="$MODDIR/run/dohd.sock"
 FIREWALL="$MODDIR/scripts/firewall.sh"
 . "$MODDIR/scripts/private-dns.sh"
+. "$MODDIR/scripts/process.sh"
 mkdir -p "$MODDIR/run" "$MODDIR/config"
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 case "$(uname -m)" in
@@ -17,18 +18,20 @@ esac
 BINARY="$MODDIR/system/bin/$ABI/dohd"
 [ -x "$BINARY" ] || { echo "Missing daemon for ABI: $ABI" >&2; exit 1; }
 "$FIREWALL" remove
-if [ -f "$PIDFILE" ]; then
-	pid=$(cat "$PIDFILE")
-	case "$pid" in *[!0-9]*|'') exit 1 ;; esac
-	if [ "$(readlink "/proc/$pid/exe" 2>/dev/null || true)" = "$BINARY" ]; then
-		kill "$pid" || exit 1
-		for _ in 1 2 3 4 5; do
-			kill -0 "$pid" 2>/dev/null || break
-			sleep 1
-		done
-		kill -0 "$pid" 2>/dev/null && exit 1
+for pid in $(daemon_pids); do
+	state=
+	kill "$pid" || exit 1
+	for _ in 1 2 3 4 5; do
+		kill -0 "$pid" 2>/dev/null || break
+		state=$(awk '/^State:/ {print $2}' "/proc/$pid/status" 2>/dev/null || true)
+		[ "$state" = Z ] && break
+		sleep 1
+	done
+	if kill -0 "$pid" 2>/dev/null && [ "${state:-}" != Z ]; then
+		echo "Daemon did not stop" >&2
+		exit 1
 	fi
-fi
+done
 rm -f "$SOCKET" "$PIDFILE"
 private_dns_restore || exit 1
 DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
