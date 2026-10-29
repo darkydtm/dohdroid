@@ -8,4 +8,8 @@ if [ -f "$PIDFILE" ]; then
 	rm -f "$PIDFILE"
 fi
 "$MODDIR/scripts/firewall.sh" remove 2>/dev/null || true
+"$MODDIR/scripts/tun-firewall.sh" remove 2>/dev/null || true
+if [ -f "$MODDIR/run/tun.pid" ]; then
+	kill "$(cat "$MODDIR/run/tun.pid")" 2>/dev/null || true
+fi
 rm -f "$SOCKET"

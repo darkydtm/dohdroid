@@ -75,7 +75,7 @@
 	<div class="app">
 		<main class="main">
 			<section class="content">
-				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" list="resolverHistory" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><datalist id="resolverHistory"></datalist><span class="error" id="resolverError" role="alert"></span></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button></div></div></section>
+				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" list="resolverHistory" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><datalist id="resolverHistory"></datalist><span class="error" id="resolverError" role="alert"></span></div><div class="field"><label for="tunMode">DNS interception mode</label><select id="tunMode"><option value="off">Standard</option><option value="on">TUN - compatible with VPN</option></select></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button></div></div></section>
 				<section class="card"><div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div><div class="metrics"><div class="metric"><div class="metric-value" id="queries">-</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value" id="errors">-</div><div class="metric-label">Errors</div></div></div><div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div></section>
 			</section>
 			<div class="log" id="log"></div>
@@ -99,6 +99,18 @@
 		const addLog = (message) => { const line = document.createElement('div'); line.textContent = `${new Date().toLocaleTimeString('en-GB')} ${message}`; log.prepend(line); };
 		const showError = (message) => addLog(`error: ${message}`);
 		let callbackId = 0;
+		function tunRequest(operation) {
+			return new Promise((resolve, reject) => {
+				if (!window.ksu) { reject(new Error('KernelSU WebUI is required')); return; }
+				const callback = `dohdCallback${callbackId++}`;
+				window[callback] = (code, stdout, stderr) => {
+					delete window[callback];
+					if (code !== 0) { reject(new Error(stderr || 'TUN operation failed')); return; }
+					try { resolve(JSON.parse(stdout).result); } catch (error) { reject(error); }
+				};
+				try { ksu.exec(`sh /data/adb/modules/doh-dns/scripts/webui.sh ${operation}`, '{}', callback); } catch (error) { delete window[callback]; reject(error); }
+			});
+		}
 		function request(operation, config) {
 			return new Promise((resolve, reject) => {
 				if (!window.ksu) { reject(new Error('KernelSU WebUI is required')); return; }
@@ -128,7 +140,8 @@
 		}
 		async function loadState() {
 			try {
-				const [config, status] = await Promise.all([request('get_config'), request('status')]);
+				const [config, status, tun] = await Promise.all([request('get_config'), request('status'), tunRequest('tun-status')]);
+				document.querySelector('#tunMode').value = tun ? 'on' : 'off';
 				document.querySelector('#queries').textContent = status.requests;
 				document.querySelector('#errors').textContent = status.errors;
 				const resolver = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
@@ -152,6 +165,8 @@
 				config.fallback_mode = fallback.value;
 				await request('put_config', config);
 				showHistory(await request('get_config'));
+				const tun = document.querySelector('#tunMode').value === 'on';
+				if (tun !== await tunRequest('tun-status')) await tunRequest(tun ? 'tun-enable' : 'tun-disable');
 				addLog('configuration saved');
 			} catch (error) { showError(error.message); }
 		});

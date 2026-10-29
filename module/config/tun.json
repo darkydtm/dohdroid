@@ -1,0 +1,20 @@
+{
+	"log": { "level": "warn" },
+	"dns": {
+		"servers": [
+			{ "type": "udp", "tag": "dohd", "server": "127.0.0.1", "server_port": 5353 }
+		],
+		"final": "dohd",
+		"disable_cache": true
+	},
+	"inbounds": [
+		{ "type": "tun", "tag": "dns-tun", "interface_name": "dohdtun0", "address": ["172.30.253.1/30", "fdfe:dcba:9876::1/126"], "auto_route": false, "mtu": 1500 }
+	],
+	"route": {
+		"rules": [
+			{ "port": 53, "action": "hijack-dns" }
+		],
+		"final": "direct"
+	},
+	"outbounds": [ { "type": "direct", "tag": "direct" } ]
+}

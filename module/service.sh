@@ -25,11 +25,39 @@ while [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ]; do
 		sleep 1
 	done
 	if [ -S "$MODDIR/run/dohd.sock" ]; then
-		"$MODDIR/scripts/firewall.sh" install || true
+		if [ -f "$MODDIR/config/tun-enabled" ]; then
+			"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/config/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
+			tun_pid=$!
+			echo "$tun_pid" > "$MODDIR/run/tun.pid"
+			for _ in 1 2 3 4 5 6 7 8 9 10; do
+				/system/bin/ip link show dohdtun0 >/dev/null 2>&1 && break
+				kill -0 "$tun_pid" 2>/dev/null || break
+				sleep 1
+			done
+			if ! kill -0 "$tun_pid" 2>/dev/null || ! "$MODDIR/scripts/tun-firewall.sh" install; then
+				kill "$tun_pid" 2>/dev/null || true
+				kill "$pid" 2>/dev/null || true
+			fi
+		else
+			"$MODDIR/scripts/firewall.sh" install || true
+		fi
 	fi
-	wait "$pid" || true
+	while kill -0 "$pid" 2>/dev/null; do
+		if [ -n "${tun_pid:-}" ] && ! kill -0 "$tun_pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null || true
+			break
+		fi
+		sleep 2
+	done
+	wait "$pid" 2>/dev/null || true
+	"$MODDIR/scripts/tun-firewall.sh" remove || true
+	if [ -n "${tun_pid:-}" ]; then
+		kill "$tun_pid" 2>/dev/null || true
+		wait "$tun_pid" 2>/dev/null || true
+		unset tun_pid
+	fi
 	"$MODDIR/scripts/firewall.sh" remove || true
-	rm -f "$PIDFILE" "$MODDIR/run/dohd.sock"
+	rm -f "$PIDFILE" "$MODDIR/run/dohd.sock" "$MODDIR/run/tun.pid"
 	sleep 5
 done
 ) </dev/null >/dev/null 2>&1 &

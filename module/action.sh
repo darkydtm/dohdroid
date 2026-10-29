@@ -2,6 +2,9 @@
 set -eu
 MODDIR=${0%/*}
 FIREWALL="$MODDIR/scripts/firewall.sh"
+if [ -f "$MODDIR/config/tun-enabled" ]; then
+	FIREWALL="$MODDIR/scripts/tun-firewall.sh"
+fi
 SOCKET="$MODDIR/run/dohd.sock"
 MODULE_PROP="$MODDIR/module.prop"
 CONFIG="$MODDIR/config/config.toml"
