@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+          components: clippy,rustfmt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "ndk;26.3.11579264"
+      - run: cargo fmt --check
+      - run: cargo test
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/26.3.11579264"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          cargo build --release --target aarch64-linux-android
+      - run: bash -n service.sh uninstall.sh action.sh package.sh scripts/*.sh
