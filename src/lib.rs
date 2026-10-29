@@ -7,3 +7,4 @@ pub mod dns;
 pub mod doh;
 pub mod resolver;
 pub mod runtime;
+pub mod web;
