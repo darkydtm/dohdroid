@@ -46,11 +46,7 @@ async fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("run/dohd.sock"));
     let config_value = config.snapshot();
-    let pool = dohd::resolver::ResolverPool::new(config_value.resolvers.clone())?;
-    let handler = Arc::new(dohd::dns::DohHandler::new(
-        pool,
-        config_value.fallback_mode.clone(),
-    ));
+    let handler = Arc::new(dohd::dns::DohHandler::new(config.clone())?);
     let udp = tokio::net::UdpSocket::bind((
         config_value.listen_address.as_str(),
         config_value.listen_port,

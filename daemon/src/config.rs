@@ -18,7 +18,7 @@ pub enum FallbackMode {
     Disabled,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ResolverConfig {
     pub name: String,
     pub url: String,
@@ -45,6 +45,8 @@ pub struct Config {
     pub cache_capacity: usize,
     #[serde(default)]
     pub fallback_mode: FallbackMode,
+    #[serde(default)]
+    pub resolver_history: Vec<String>,
     pub resolvers: Vec<ResolverConfig>,
 }
 
@@ -158,13 +160,20 @@ impl ConfigStore {
     pub fn snapshot(&self) -> Config {
         self.current.read().unwrap().clone()
     }
-    pub fn replace(&self, config: Config) -> Result<(), ConfigError> {
+    pub fn replace(&self, mut config: Config) -> Result<(), ConfigError> {
         config.validate()?;
+        let mut current = self.current.write().unwrap();
+        config.resolver_history = current.resolver_history.clone();
+
+        for resolver in config.resolvers.iter().filter(|resolver| resolver.enabled) {
+            config.resolver_history.retain(|url| url != &resolver.url);
+            config.resolver_history.insert(0, resolver.url.clone());
+        }
         let data = toml::to_string_pretty(&config)?;
         let temp = self.path.with_extension("toml.tmp");
         fs::write(&temp, data)?;
         fs::rename(&temp, &self.path)?;
-        *self.current.write().unwrap() = config;
+        *current = config;
         Ok(())
     }
     pub fn reload(&self) -> Result<(), ConfigError> {
