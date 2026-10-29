@@ -51,7 +51,7 @@ jobs:
             target: i686-linux-android
             linker: i686-linux-android24-clang
             cc: i686-linux-android24-clang
-            ar: i686-linux-android-ar
+            ar: llvm-ar
             cargo_target: I686_LINUX_ANDROID
     steps:
       - uses: actions/checkout@v4
