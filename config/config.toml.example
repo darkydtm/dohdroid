@@ -1,0 +1,14 @@
+listen_address = "127.0.0.1"
+listen_port = 5353
+connect_timeout_ms = 3000
+request_timeout_ms = 5000
+cache_enabled = true
+cache_capacity = 4096
+fallback_mode = "System"
+
+[[resolvers]]
+name = "cloudflare"
+url = "https://cloudflare-dns.com/dns-query"
+bootstrap_ips = ["1.1.1.1", "1.0.0.1"]
+enabled = true
+cooldown_seconds = 30

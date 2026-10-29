@@ -1,0 +1,6 @@
+id = "doh-dns"
+name = "DoH DNS"
+version = "0.1.0"
+versionCode = 1
+author = "dohdroid"
+description = "Local DNS-over-HTTPS proxy"
