@@ -3,6 +3,7 @@ set -eu
 MODDIR=${0%/*}
 PIDFILE="$MODDIR/run/dohd.pid"
 mkdir -p "$MODDIR/run" "$MODDIR/config"
+[ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 case "$(uname -m)" in
 	aarch64) ABI=arm64-v8a ;;
 	armv7l|armv8l|arm) ABI=armeabi-v7a ;;

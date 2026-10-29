@@ -1,4 +1,8 @@
-use crate::{cache::DnsCache, config::ConfigStore, runtime::Runtime};
+use crate::{
+    cache::DnsCache,
+    config::{Config, ConfigStore},
+    runtime::Runtime,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     path::Path,
@@ -13,6 +17,7 @@ use tokio::{
 struct Request {
     api_version: u32,
     operation: String,
+    config: Option<Config>,
 }
 #[derive(Serialize)]
 struct Response<T> {
@@ -54,6 +59,12 @@ pub async fn serve(
                             Some(serde_json::to_value(runtime.lock().unwrap().status()).unwrap())
                         }
                         "get_config" => Some(serde_json::to_value(config.snapshot()).unwrap()),
+                        "put_config" => r.config.and_then(|value| {
+                            config
+                                .replace(value)
+                                .ok()
+                                .map(|_| serde_json::json!({"saved": true}))
+                        }),
                         "clear_cache" => {
                             cache.lock().unwrap().clear();
                             Some(serde_json::json!({"cleared": true}))
