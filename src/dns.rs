@@ -1,13 +1,41 @@
-use anyhow::Result;
 use std::sync::Arc;
+use tokio::sync::Mutex;
+
+use anyhow::Result;
+use async_trait::async_trait;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, UdpSocket};
 
+use crate::config::FallbackMode;
+use crate::resolver::ResolverPool;
+
 pub const MAX_DNS_PACKET: usize = 4096;
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait DnsHandler: Send + Sync {
     async fn handle(&self, query: Vec<u8>) -> Result<Vec<u8>>;
+}
+
+pub struct DohHandler {
+    pool: Mutex<ResolverPool>,
+    fallback: FallbackMode,
+}
+
+impl DohHandler {
+    pub fn new(pool: ResolverPool, fallback: FallbackMode) -> Self {
+        Self {
+            pool: Mutex::new(pool),
+            fallback,
+        }
+    }
+}
+
+#[async_trait]
+impl DnsHandler for DohHandler {
+    async fn handle(&self, query: Vec<u8>) -> Result<Vec<u8>> {
+        let mut pool = self.pool.lock().await;
+        pool.resolve(&query, &self.fallback).await
+    }
 }
 
 pub struct DnsServer<H> {
@@ -18,6 +46,7 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
     pub fn new(handler: Arc<H>) -> Self {
         Self { handler }
     }
+
     pub async fn serve_udp(&self, socket: UdpSocket) -> Result<()> {
         let mut buffer = [0u8; MAX_DNS_PACKET];
         loop {
@@ -25,12 +54,13 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
             if size == 0 {
                 continue;
             }
-            let response = self.handler.handle(buffer[..size].to_vec()).await?;
+            let response: Vec<u8> = self.handler.handle(buffer[..size].to_vec()).await?;
             if response.len() <= MAX_DNS_PACKET {
                 socket.send_to(&response, peer).await?;
             }
         }
     }
+
     pub async fn serve_tcp(&self, listener: TcpListener) -> Result<()> {
         loop {
             let (mut stream, _) = listener.accept().await?;
@@ -43,7 +73,7 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
                     }
                     let mut query = vec![0u8; length];
                     stream.read_exact(&mut query).await?;
-                    let response = handler.handle(query).await?;
+                    let response: Vec<u8> = handler.handle(query).await?;
                     if response.len() > MAX_DNS_PACKET {
                         anyhow::bail!("DNS response too large");
                     }
