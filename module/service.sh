@@ -4,6 +4,7 @@ MODDIR=${0%/*}
 PIDFILE="$MODDIR/run/dohd.pid"
 SOCKET="$MODDIR/run/dohd.sock"
 FIREWALL="$MODDIR/scripts/firewall.sh"
+TUN_FIREWALL="$MODDIR/scripts/tun-firewall.sh"
 . "$MODDIR/scripts/private-dns.sh"
 . "$MODDIR/scripts/process.sh"
 mkdir -p "$MODDIR/run" "$MODDIR/config"
@@ -17,6 +18,7 @@ case "$(uname -m)" in
 esac
 BINARY="$MODDIR/system/bin/$ABI/dohd"
 [ -x "$BINARY" ] || { echo "Missing daemon for ABI: $ABI" >&2; exit 1; }
+if [ -f "$MODDIR/config/tun-enabled" ]; then FIREWALL="$TUN_FIREWALL"; fi
 "$FIREWALL" remove
 for pid in $(daemon_pids); do
 	state=
@@ -32,6 +34,11 @@ for pid in $(daemon_pids); do
 		exit 1
 	fi
 done
+"$TUN_FIREWALL" remove || true
+if [ -f "$MODDIR/run/tun.pid" ]; then
+	kill "$(cat "$MODDIR/run/tun.pid")" 2>/dev/null || true
+	rm -f "$MODDIR/run/tun.pid"
+fi
 rm -f "$SOCKET" "$PIDFILE"
 private_dns_restore || exit 1
 DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
@@ -48,8 +55,30 @@ if [ ! -S "$SOCKET" ]; then
 	echo "Daemon failed to start; check $MODDIR/run/dohd.log" >&2
 	exit 1
 fi
-if ! private_dns_disable || ! "$FIREWALL" install; then
+if ! private_dns_disable; then
 	"$FIREWALL" remove || true
+	private_dns_restore || true
+	kill "$pid" 2>/dev/null || true
+	exit 1
+fi
+if [ -f "$MODDIR/config/tun-enabled" ]; then
+	"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/config/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
+	tun_pid=$!
+	echo "$tun_pid" > "$MODDIR/run/tun.pid"
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		/system/bin/ip link show dohdtun0 >/dev/null 2>&1 && break
+		kill -0 "$tun_pid" 2>/dev/null || break
+		sleep 1
+	done
+	if ! kill -0 "$tun_pid" 2>/dev/null || ! "$TUN_FIREWALL" install; then
+		"$TUN_FIREWALL" remove || true
+		kill "$tun_pid" 2>/dev/null || true
+		rm -f "$MODDIR/run/tun.pid"
+		kill "$pid" 2>/dev/null || true
+		private_dns_restore || true
+		exit 1
+	fi
+elif ! "$FIREWALL" install; then
 	private_dns_restore || true
 	kill "$pid" 2>/dev/null || true
 	exit 1

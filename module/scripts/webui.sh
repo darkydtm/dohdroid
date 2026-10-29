@@ -1,6 +1,18 @@
 #!/system/bin/sh
 set -eu
 MODDIR=${0%/*/*}
+case "${1:-}" in
+	tun-status)
+		if [ -f "$MODDIR/config/tun-enabled" ]; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
+		exit 0
+		;;
+	tun-enable|tun-disable)
+		if [ "$1" = tun-enable ]; then touch "$MODDIR/config/tun-enabled"; else rm -f "$MODDIR/config/tun-enabled"; fi
+		if [ -f "$MODDIR/run/dohd.pid" ]; then kill "$(cat "$MODDIR/run/dohd.pid")" 2>/dev/null || true; fi
+		printf '%s\n' '{"ok":true,"result":true}'
+		exit 0
+		;;
+esac
 case "$(uname -m)" in
 	aarch64) ABI=arm64-v8a ;;
 	armv7l|armv8l|arm) ABI=armeabi-v7a ;;
