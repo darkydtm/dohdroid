@@ -4,26 +4,123 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  quality:
+    name: Quality checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
           components: clippy,rustfmt
+      - run: cargo fmt --check
+      - run: cargo test
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: bash -n service.sh uninstall.sh action.sh package.sh scripts/*.sh
+
+  build:
+    name: Build ${{ matrix.abi }}
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            target: aarch64-linux-android
+            linker: aarch64-linux-android24-clang
+            cargo_target: AARCH64_LINUX_ANDROID
+          - abi: armeabi-v7a
+            target: armv7-linux-androideabi
+            linker: armv7a-linux-androideabi24-clang
+            cargo_target: ARMV7_LINUX_ANDROIDEABI
+          - abi: x86_64
+            target: x86_64-linux-android
+            linker: x86_64-linux-android24-clang
+            cargo_target: X86_64_LINUX_ANDROID
+          - abi: x86
+            target: i686-linux-android
+            linker: i686-linux-android24-clang
+            cargo_target: I686_LINUX_ANDROID
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
       - run: sdkmanager "ndk;26.3.11579264"
-      - run: cargo fmt --check
-      - run: cargo test
-      - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: |
+      - name: Build Android binary
+        env:
+          TARGET: ${{ matrix.target }}
+          LINKER: ${{ matrix.linker }}
+        run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/26.3.11579264"
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
-          cargo build --release --target aarch64-linux-android
-      - run: bash -n service.sh uninstall.sh action.sh package.sh scripts/*.sh
+          export CARGO_TARGET_${{ matrix.cargo_target }}_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$LINKER"
+          cargo build --release --target "$TARGET"
+          mkdir -p "artifact/${{ matrix.abi }}/release"
+          cp "target/$TARGET/release/dohd" "artifact/${{ matrix.abi }}/release/dohd"
+          chmod 0755 "artifact/${{ matrix.abi }}/release/dohd"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dohd-${{ matrix.abi }}
+          path: artifact/${{ matrix.abi }}/release/dohd
+          if-no-files-found: error
+
+  package:
+    name: Package Magisk module
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dohd-*
+          path: target-artifacts
+      - name: Assemble ZIP
+        run: |
+          mkdir -p package/config package/system/bin
+          cp module.prop service.sh uninstall.sh action.sh package/
+          cp config/config.toml.example package/config/
+          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+            test -x "target-artifacts/dohd-$abi/dohd"
+            mkdir -p "package/system/bin/$abi"
+            cp "target-artifacts/dohd-$abi/dohd" "package/system/bin/$abi/dohd"
+            chmod 0755 "package/system/bin/$abi/dohd"
+          done
+          chmod 0755 package/*.sh
+          (cd package && zip -qr ../doh-dns.zip .)
+          sha256sum doh-dns.zip > doh-dns.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dohd-magisk-module
+          path: |
+            doh-dns.zip
+            doh-dns.zip.sha256
+          if-no-files-found: error
+
+  verify-package:
+    name: Verify package
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dohd-magisk-module
+      - run: |
+          sha256sum -c doh-dns.zip.sha256
+          unzip -l doh-dns.zip
+          for path in \
+            module.prop service.sh uninstall.sh action.sh \
+            system/bin/arm64-v8a/dohd \
+            system/bin/armeabi-v7a/dohd \
+            system/bin/x86_64/dohd \
+            system/bin/x86/dohd; do
+            unzip -l doh-dns.zip | grep -F " $path" >/dev/null
+          done
