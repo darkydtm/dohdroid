@@ -9,6 +9,7 @@ for abi in arm64-v8a armeabi-v7a x86_64 x86; do
 	cp "$ROOT/module/config/config.toml.example" "$OUT/config/"
 	cp -R "$ROOT/module/scripts" "$OUT/scripts"
 	cp -R "$ROOT/module/webroot" "$OUT/webroot"
+	sh "$ROOT/scripts/build-info.sh" "$OUT/webroot"
 	chmod 0755 "$OUT/scripts/"*.sh
 	binary="$ROOT/daemon/target/$abi/release/dohd"
 	[ -x "$binary" ] || { echo "missing binary: $binary" >&2; exit 1; }
