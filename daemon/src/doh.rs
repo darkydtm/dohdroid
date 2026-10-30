@@ -1,22 +1,28 @@
 use crate::config::ResolverConfig;
 use anyhow::{Context, Result};
 use reqwest::Client;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 use url::Url;
 
-pub struct DohClient {
-    client: Client,
-}
+pub struct DohClient;
 impl DohClient {
     pub fn new(_resolvers: &[ResolverConfig]) -> Result<Self> {
-        Ok(Self {
-            client: Client::builder().user_agent("dohd/0.1").build()?,
-        })
+        Ok(Self)
     }
-    pub async fn resolve(&self, resolver: &ResolverConfig, query: &[u8]) -> Result<Vec<u8>> {
+    pub async fn resolve(
+        &self,
+        resolver: &ResolverConfig,
+        query: &[u8],
+        connect_timeout: Duration,
+        request_timeout: Duration,
+    ) -> Result<Vec<u8>> {
         let url = Url::parse(&resolver.url)?;
         let client = if resolver.bootstrap_ips.is_empty() {
-            self.client.clone()
+            Client::builder()
+                .user_agent("dohd/0.1")
+                .connect_timeout(connect_timeout)
+                .timeout(request_timeout)
+                .build()?
         } else {
             let addresses = resolver
                 .bootstrap_ips
@@ -30,6 +36,8 @@ impl DohClient {
                 .collect::<Result<Vec<_>>>()?;
             Client::builder()
                 .user_agent("dohd/0.1")
+                .connect_timeout(connect_timeout)
+                .timeout(request_timeout)
                 .resolve_to_addrs(url.host_str().unwrap(), &addresses)
                 .build()?
         };

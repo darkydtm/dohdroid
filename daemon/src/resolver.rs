@@ -16,13 +16,23 @@ impl ResolverPool {
             resolvers: resolvers.into_iter().map(|r| (r, None)).collect(),
         })
     }
-    pub async fn resolve(&mut self, query: &[u8], fallback: &FallbackMode) -> Result<Vec<u8>> {
+    pub async fn resolve(
+        &mut self,
+        query: &[u8],
+        fallback: &FallbackMode,
+        connect_timeout: Duration,
+        request_timeout: Duration,
+    ) -> Result<Vec<u8>> {
         let now = Instant::now();
         for (resolver, cooldown) in &mut self.resolvers {
             if !resolver.enabled || cooldown.is_some_and(|until| until > now) {
                 continue;
             }
-            match self.client.resolve(resolver, query).await {
+            match self
+                .client
+                .resolve(resolver, query, connect_timeout, request_timeout)
+                .await
+            {
                 Ok(response) => return Ok(response),
                 Err(error) => {
                     *cooldown = Some(now + Duration::from_secs(resolver.cooldown_seconds));

@@ -37,6 +37,8 @@ impl DnsHandler for DohHandler {
     async fn handle(&self, query: Vec<u8>) -> Result<Vec<u8>> {
         let mut pool = self.pool.lock().await;
         let config = self.config.snapshot();
+        let connect_timeout = config.connect_timeout();
+        let request_timeout = config.request_timeout();
         if pool.0 != config.resolvers || pool.1 != config.fallback_mode {
             *pool = (
                 config.resolvers.clone(),
@@ -45,7 +47,9 @@ impl DnsHandler for DohHandler {
             );
         }
         let (_, fallback, resolver) = &mut *pool;
-        resolver.resolve(&query, fallback).await
+        resolver
+            .resolve(&query, fallback, connect_timeout, request_timeout)
+            .await
     }
 }
 
