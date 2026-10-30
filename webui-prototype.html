@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DoH DNS</title>
+	<style>
+		:root {
+			color-scheme: dark;
+			--md-sys-color-primary: #b9c8ff;
+			--md-sys-color-on-primary: #142d60;
+			--md-sys-color-primary-container: #304578;
+			--md-sys-color-on-primary-container: #dce2ff;
+			--md-sys-color-secondary-container: #3d465d;
+			--md-sys-color-on-secondary-container: #dbe2f9;
+			--md-sys-color-error: #ffb4ab;
+			--md-sys-color-on-error-container: #ffdad6;
+			--md-sys-color-error-container: #93000a;
+			--md-sys-color-surface: #101318;
+			--md-sys-color-surface-container-low: #191c22;
+			--md-sys-color-surface-container: #1d2026;
+			--md-sys-color-surface-container-high: #282b32;
+			--md-sys-color-on-surface: #e2e2e9;
+			--md-sys-color-on-surface-variant: #c3c6d0;
+			--md-sys-color-outline: #8d9099;
+			--md-sys-color-outline-variant: #43474f;
+			--md-sys-shape-small: 8px;
+			--md-sys-shape-medium: 12px;
+			--md-sys-shape-large: 16px;
+			--md-sys-shape-full: 999px;
+			--md-typescale-display: clamp(2.1rem, 6vw, 3.5rem);
+			--md-typescale-title: 1.4rem;
+			--md-typescale-body: 1rem;
+			--md-typescale-label: .75rem;
+		}
+		* { box-sizing: border-box; }
+		body { margin: 0; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); font-family: Roboto, system-ui, sans-serif; }
+		button, input, select { font: inherit; }
+		button { cursor: pointer; }
+		.app { min-height: 100dvh; display: flex; }
+		.main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+		.content { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); gap: 20px; }
+		.card { overflow: hidden; border-radius: var(--md-sys-shape-large); background: var(--md-sys-color-surface-container); }
+		.card-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; }
+		.card-title { margin: 0; font-size: 1.05rem; font-weight: 500; }
+		.card-support { color: var(--md-sys-color-on-surface-variant); font-size: .8rem; }
+		.card-body { padding: 0 20px 20px; }
+		.field { display: grid; gap: 8px; margin-top: 18px; }
+		label { color: var(--md-sys-color-on-surface-variant); font-size: var(--md-typescale-label); }
+		input, select { width: 100%; border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-small); padding: 14px 16px; outline: 0; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
+		input:focus, select:focus { border-color: var(--md-sys-color-primary); box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+		input.invalid, select.invalid { border-color: var(--md-sys-color-error); box-shadow: 0 0 0 2px var(--md-sys-color-error-container); }
+		.error { min-height: 1em; color: var(--md-sys-color-error); font-size: .75rem; }
+		.resolver { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 16px 0; border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+		.resolver:last-child { border-bottom: 0; }
+		.resolver-name { font-weight: 600; }
+		.resolver-url { grid-column: 1; color: var(--md-sys-color-on-surface-variant); font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.chip { align-self: center; padding: 7px 12px; border-radius: var(--md-sys-shape-full); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); font-size: var(--md-typescale-label); }
+		.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+		button { min-height: 40px; border: 0; border-radius: var(--md-sys-shape-full); padding: 0 20px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 600; }
+		button.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+		button:active { transform: scale(.98); }
+		.metrics { display: grid; grid-template-columns: 1fr 1fr; }
+		.metric { padding: 20px; background: var(--md-sys-color-surface-container-high); }
+		.metric:nth-child(odd) { border-right: 1px solid var(--md-sys-color-outline-variant); }
+		.metric:nth-child(-n+2) { border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+		.metric-value { font-size: 1.6rem; font-weight: 500; }
+		.metric-label { margin-top: 7px; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-typescale-label); }
+		.log { margin-top: 20px; padding: 16px 20px; border-radius: var(--md-sys-shape-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface-variant); font-family: monospace; font-size: .75rem; line-height: 1.8; }
+		.log strong { color: var(--md-sys-color-primary); font-weight: 400; }
+		@media (max-width: 760px) { .main { width: min(100% - 32px, 620px); padding-top: 20px; } .content { grid-template-columns: 1fr; } }
+	</style>
+</head>
+<body>
+	<div class="app">
+		<main class="main">
+			<section class="content">
+				<section class="card"><div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div><div class="card-body"><div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><span class="error" id="resolverError" role="alert"></span></div><div class="resolver"><div class="resolver-name">Cloudflare</div><span class="chip">Active</span><div class="resolver-url">1.1.1.1, 1.0.0.1</div></div><div class="resolver"><div class="resolver-name">Quad9</div><span class="chip">Standby</span><div class="resolver-url">9.9.9.9, 149.112.112.112</div></div><div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Test resolver</button></div></div></section>
+				<section class="card"><div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div><div class="metrics"><div class="metric"><div class="metric-value">12.8k</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value">98.4%</div><div class="metric-label">Cache hit</div></div><div class="metric"><div class="metric-value">34 ms</div><div class="metric-label">Last response</div></div><div class="metric"><div class="metric-value">0</div><div class="metric-label">Errors</div></div></div><div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div></section>
+			</section>
+			<div class="log" id="log"><strong>20:14:08</strong> daemon ready<br><strong>20:14:09</strong> resolver pool healthy<br><strong>20:14:10</strong> configuration loaded</div>
+		</main>
+	</div>
+	<script>
+		const log = document.querySelector('#log');
+		const url = document.querySelector('#resolverUrl');
+		const timeout = document.querySelector('#timeout');
+		const fallback = document.querySelector('#fallback');
+		const resolverError = document.querySelector('#resolverError');
+		const timeoutError = document.querySelector('#timeoutError');
+		const addLog = (message) => { log.innerHTML = `<strong>${new Date().toLocaleTimeString('en-GB')}</strong> ${message}<br>` + log.innerHTML; };
+		const showError = (message) => addLog(`error: ${message}`);
+		function validate() {
+			const value = url.value.trim();
+			let parsed;
+			try { parsed = new URL(value); } catch { parsed = null; }
+			const urlValid = Boolean(parsed && parsed.protocol === 'https:' && parsed.hostname && parsed.pathname !== '/');
+			const timeoutValue = Number.parseInt(timeout.value.trim().replace(/\s*ms\s*$/i, ''), 10);
+			const timeoutValid = Number.isInteger(timeoutValue) && timeoutValue >= 100 && timeoutValue <= 60000;
+			url.classList.toggle('invalid', !urlValid);
+			timeout.classList.toggle('invalid', !timeoutValid);
+			resolverError.textContent = urlValid ? '' : 'Enter a valid HTTPS DoH URL.';
+			timeoutError.textContent = timeoutValid ? '' : 'Use a timeout from 100 to 60000 ms.';
+			return urlValid && timeoutValid;
+		}
+		async function loadState() {
+			try {
+				const [configResponse, statusResponse] = await Promise.all([fetch('/api/config'), fetch('/api/status')]);
+				if (!configResponse.ok || !statusResponse.ok) throw new Error('API request failed');
+				const config = (await configResponse.json()).config;
+				const resolver = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
+				if (resolver) url.value = resolver.url;
+				timeout.value = `${config.request_timeout_ms} ms`;
+				fallback.value = config.fallback_mode;
+				validate();
+				addLog('configuration loaded from daemon');
+			} catch (error) { showError(error.message); }
+		}
+		document.querySelector('#saveButton').addEventListener('click', async () => {
+			if (!validate()) return;
+			try {
+				const config = (await (await fetch('/api/config')).json()).config;
+				const active = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
+				if (!active) throw new Error('No resolver configured');
+				active.url = url.value.trim();
+				config.request_timeout_ms = Number.parseInt(timeout.value, 10);
+				config.fallback_mode = fallback.value;
+				const response = await fetch('/api/config', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) });
+				if (!response.ok) throw new Error((await response.json()).error || 'Configuration rejected');
+				addLog('configuration saved');
+			} catch (error) { showError(error.message); }
+		});
+		document.querySelector('#testButton').addEventListener('click', async () => {
+			if (!validate()) return;
+			try { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Daemon is unavailable'); addLog(`daemon reachable for ${url.value.trim()}`); } catch (error) { showError(error.message); }
+		});
+		url.addEventListener('input', validate);
+		timeout.addEventListener('input', validate);
+		loadState();
+	</script>
+</body>
+</html>
