@@ -16,19 +16,24 @@ update_description() { :; }
 SCRIPT
 cat > "$TMP/module/service.sh" <<'SCRIPT'
 printf '%s\n' started >> "$TEST_LOG"
+if [ -f "$MODDIR/run/fail-once" ]; then
+	rm -f "$MODDIR/run/fail-once"
+	exit 1
+fi
+touch "$MODDIR/run/running"
 SCRIPT
 cat > "$TMP/module/scripts/sleep" <<'SCRIPT'
 #!/bin/sh
 printf 'sleep:%s\n' "$1" >> "$TEST_LOG"
 SCRIPT
 chmod +x "$TMP/module/scripts/sleep"
-export TEST_LOG="$TMP/log" PATH="$TMP/module/scripts:$PATH"
+export TEST_LOG="$TMP/log" MODDIR="$TMP/module" PATH="$TMP/module/scripts:$PATH"
 sh "$TMP/module/boot-completed.sh"
 [ ! -f "$TEST_LOG" ]
 touch "$TMP/module/config/daemon-enabled"
+touch "$TMP/module/run/fail-once"
 sh "$TMP/module/boot-completed.sh"
-[ "$(grep -c '^started$' "$TEST_LOG")" -eq 1 ]
-if grep -q '^sleep:' "$TEST_LOG"; then exit 1; fi
-touch "$TMP/module/run/running"
+[ "$(grep -c '^started$' "$TEST_LOG")" -eq 2 ]
+grep -q '^sleep:5$' "$TEST_LOG"
 sh "$TMP/module/boot-completed.sh"
-[ "$(grep -c '^started$' "$TEST_LOG")" -eq 1 ]
+[ "$(grep -c '^started$' "$TEST_LOG")" -eq 2 ]
