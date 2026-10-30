@@ -26,7 +26,7 @@ install_family() {
 	"$IP" "$family" route add default dev dohdtun0 table "$TABLE" || return 1
 	"$IP" "$family" rule add priority "$PRIORITY" fwmark "$MARK" lookup "$TABLE" || return 1
 	"$firewall" -t mangle -N "$CHAIN" || return 1
-	"$firewall" -t mangle -A "$CHAIN" -m owner --uid-owner 0 -j RETURN || return 1
+
 	if [ "$family" = -4 ]; then
 		"$firewall" -t mangle -A "$CHAIN" -d 127.0.0.0/8 -j RETURN || return 1
 	else
