@@ -53,6 +53,11 @@ if ! daemon_enabled; then
 	exit 0
 fi
 private_dns_restore || exit 1
+if ! "$MODDIR/scripts/bootstrap.sh" "$MODDIR/config/config.toml"; then
+	if killswitch_enabled; then "$KILLSWITCH" install || true; fi
+	echo "DoH resolver bootstrap lookup failed" >&2
+	exit 1
+fi
 DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" DOHD_WEB_ROOT="$MODDIR/webroot" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
 pid=$!
 echo "$pid" > "$PIDFILE"
