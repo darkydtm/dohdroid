@@ -25,3 +25,6 @@ fi
 if [ -f "$old_moddir/config/tun-enabled" ] && [ "$MODPATH" != "$old_moddir" ]; then
 	touch "$MODPATH/config/tun-enabled"
 fi
+if [ -f "$old_moddir/config/killswitch-enabled" ] && [ "$MODPATH" != "$old_moddir" ]; then
+	touch "$MODPATH/config/killswitch-enabled"
+fi

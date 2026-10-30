@@ -39,3 +39,23 @@ tun_enable() {
 tun_disable() {
 	rm -f "$MODDIR/config/tun-enabled"
 }
+
+killswitch_enabled() {
+	[ -f "$MODDIR/config/killswitch-enabled" ]
+}
+
+killswitch_state() {
+	if killswitch_enabled; then
+		printf '%s\n' enabled
+	else
+		printf '%s\n' disabled
+	fi
+}
+
+killswitch_enable() {
+	touch "$MODDIR/config/killswitch-enabled"
+}
+
+killswitch_disable() {
+	rm -f "$MODDIR/config/killswitch-enabled"
+}

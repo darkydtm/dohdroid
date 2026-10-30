@@ -3,6 +3,16 @@ set -eu
 MODDIR=${0%/*/*}
 . "$MODDIR/scripts/state.sh"
 case "${1:-}" in
+	killswitch-status)
+		if killswitch_enabled; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
+		exit 0
+		;;
+	killswitch-enable|killswitch-disable)
+		if [ "$1" = killswitch-enable ]; then killswitch_enable; else killswitch_disable; fi
+		if daemon_enabled; then sh "$MODDIR/service.sh"; fi
+		printf '%s\n' '{"ok":true,"result":true}'
+		exit 0
+		;;
 	tun-status)
 		if tun_enabled; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
 		exit 0

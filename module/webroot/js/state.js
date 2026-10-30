@@ -4,6 +4,7 @@
 		timeout: document.querySelector('#timeout'),
 		fallback: document.querySelector('#fallback'),
 		tunMode: document.querySelector('#tunMode'),
+		killswitchMode: document.querySelector('#killswitchMode'),
 		history: document.querySelector('#resolverHistory'),
 		historyList: document.querySelector('#resolverHistoryList'),
 		resolverError: document.querySelector('#resolverError'),
@@ -52,12 +53,14 @@
 
 	async function load(addLog, showError) {
 		try {
-			const [config, status, tun] = await Promise.all([
+			const [config, status, tun, killswitch] = await Promise.all([
 			window.dohdApi.request('get_config'),
 			window.dohdApi.request('status'),
-			window.dohdApi.tunRequest('tun-status'),
+			window.dohdApi.stateRequest('tun-status'),
+			window.dohdApi.stateRequest('killswitch-status'),
 			]);
 			elements.tunMode.value = tun ? 'on' : 'off';
+			elements.killswitchMode.value = killswitch ? 'on' : 'off';
 			elements.queries.textContent = status.requests;
 			elements.errors.textContent = status.errors;
 			const resolver = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
@@ -85,7 +88,9 @@
 			await window.dohdApi.request('put_config', config);
 			showHistory(await window.dohdApi.request('get_config'));
 			const tun = elements.tunMode.value === 'on';
-			if (tun !== await window.dohdApi.tunRequest('tun-status')) await window.dohdApi.tunRequest(tun ? 'tun-enable' : 'tun-disable');
+			if (tun !== await window.dohdApi.stateRequest('tun-status')) await window.dohdApi.stateRequest(tun ? 'tun-enable' : 'tun-disable');
+			const killswitch = elements.killswitchMode.value === 'on';
+			if (killswitch !== await window.dohdApi.stateRequest('killswitch-status')) await window.dohdApi.stateRequest(killswitch ? 'killswitch-enable' : 'killswitch-disable');
 			await window.dohdApi.restartDaemon();
 			addLog('configuration saved and daemon restarted');
 		} catch (error) {

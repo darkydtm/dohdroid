@@ -1,7 +1,7 @@
 (() => {
 	let callbackId = 0;
 
-	function tunRequest(operation) {
+	function stateRequest(operation) {
 		return new Promise((resolve, reject) => {
 			if (!window.ksu) {
 				reject(new Error('KernelSU WebUI is required'));
@@ -11,7 +11,7 @@
 			window[callback] = (code, stdout, stderr) => {
 				delete window[callback];
 				if (code !== 0) {
-					reject(new Error(stderr || 'TUN operation failed'));
+					reject(new Error(stderr || 'State operation failed'));
 					return;
 				}
 				try {
@@ -82,5 +82,5 @@
 		});
 	}
 
-	window.dohdApi = { request, restartDaemon, tunRequest };
+	window.dohdApi = { request, restartDaemon, stateRequest };
 })();

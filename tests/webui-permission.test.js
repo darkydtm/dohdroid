@@ -25,6 +25,7 @@ try {
 	assert.match(html, /src="js\/state\.js"/);
 	assert.match(html, /src="js\/app\.js"/);
 	assert.match(html, /id="resolverHistoryList"/);
+	assert.match(html, /id="killswitchMode"/);
 	assert.equal(fs.existsSync(path.join(root, 'webui-prototype.html')), false);
 	const request = fs.readFileSync(path.join(root, 'module/webroot/js/api.js'), 'utf8');
 	const context = { window: {}, Promise, JSON, Error };
@@ -40,6 +41,7 @@ try {
 		console.error(error);
 		process.exitCode = 1;
 	});
+	assert.match(fs.readFileSync(path.join(root, 'module/webroot/js/state.js'), 'utf8'), /killswitch-status/);
 } finally {
 	fs.rmSync(dir, { recursive: true, force: true });
 }

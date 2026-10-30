@@ -11,7 +11,8 @@ fi
 . "$MODDIR/scripts/private-dns.sh"
 private_dns_restore || true
 "$MODDIR/scripts/tun-firewall.sh" remove 2>/dev/null || true
-rm -f "$MODDIR/config/daemon-enabled" "$MODDIR/config/tun-enabled"
+"$MODDIR/scripts/killswitch.sh" remove 2>/dev/null || true
+rm -f "$MODDIR/config/daemon-enabled" "$MODDIR/config/tun-enabled" "$MODDIR/config/killswitch-enabled"
 if [ -f "$MODDIR/run/tun.pid" ]; then
 	kill "$(cat "$MODDIR/run/tun.pid")" 2>/dev/null || true
 fi

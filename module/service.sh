@@ -5,6 +5,7 @@ PIDFILE="$MODDIR/run/dohd.pid"
 SOCKET="$MODDIR/run/dohd.sock"
 FIREWALL="$MODDIR/scripts/firewall.sh"
 TUN_FIREWALL="$MODDIR/scripts/tun-firewall.sh"
+KILLSWITCH="$MODDIR/scripts/killswitch.sh"
 . "$MODDIR/scripts/private-dns.sh"
 . "$MODDIR/scripts/process.sh"
 . "$MODDIR/scripts/state.sh"
@@ -21,6 +22,7 @@ BINARY="$MODDIR/system/bin/$ABI/dohd"
 [ -x "$BINARY" ] || { echo "Missing daemon for ABI: $ABI" >&2; exit 1; }
 if tun_enabled; then FIREWALL="$TUN_FIREWALL"; fi
 "$FIREWALL" remove
+"$KILLSWITCH" remove || true
 for pid in $(daemon_pids); do
 	state=
 	kill "$pid" || exit 1
@@ -62,6 +64,7 @@ done
 if [ ! -S "$SOCKET" ]; then
 	kill "$pid" 2>/dev/null || true
 	rm -f "$PIDFILE"
+	if killswitch_enabled; then "$KILLSWITCH" install || true; fi
 	echo "Daemon failed to start; check $MODDIR/run/dohd.log" >&2
 	exit 1
 fi
@@ -69,6 +72,7 @@ if ! private_dns_disable; then
 	"$FIREWALL" remove || true
 	private_dns_restore || true
 	kill "$pid" 2>/dev/null || true
+	if killswitch_enabled; then "$KILLSWITCH" install || true; fi
 	exit 1
 fi
 if tun_enabled; then
@@ -91,8 +95,11 @@ if tun_enabled; then
 		private_dns_restore || true
 		exit 1
 	fi
+	if killswitch_enabled; then "$KILLSWITCH" install || exit 1; fi
 elif ! "$FIREWALL" install; then
 	private_dns_restore || true
 	kill "$pid" 2>/dev/null || true
+	if killswitch_enabled; then "$KILLSWITCH" install || true; fi
 	exit 1
 fi
+if ! tun_enabled && killswitch_enabled; then "$KILLSWITCH" install || exit 1; fi
