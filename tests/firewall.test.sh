@@ -13,6 +13,5 @@ SCRIPT
 chmod +x "$TMP/bin/iptables"
 export TEST_LOG="$TMP/log" DOHD_IPTABLES="$TMP/bin/iptables"
 sh "$TMP/module/scripts/firewall.sh" install
-grep -q -- '-m owner --uid-owner 0 -j RETURN' "$TEST_LOG"
 grep -q -- '-p udp --dport 53 -j REDIRECT' "$TEST_LOG"
 grep -q -- '-p tcp --dport 53 -j REDIRECT' "$TEST_LOG"

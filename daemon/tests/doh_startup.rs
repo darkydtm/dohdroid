@@ -1,7 +1,7 @@
 use dohd::{config::ResolverConfig, doh::DohClient};
 
 #[test]
-fn client_creation_does_not_resolve_resolver_hosts() {
+fn client_creation_rejects_unresolvable_resolver_hosts() {
     let resolvers = vec![ResolverConfig {
         name: "unavailable-at-startup".into(),
         url: "https://resolver.invalid/dns-query".into(),
@@ -10,5 +10,5 @@ fn client_creation_does_not_resolve_resolver_hosts() {
         cooldown_seconds: 30,
     }];
 
-    DohClient::new(&resolvers).expect("client creation must not require network DNS");
+    assert!(DohClient::new(&resolvers).is_err());
 }
