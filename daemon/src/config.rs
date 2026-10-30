@@ -147,10 +147,20 @@ pub struct ConfigStore {
     current: Arc<RwLock<Config>>,
 }
 
+fn normalize_history(history: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut unique = std::collections::HashSet::new();
+    history
+        .into_iter()
+        .filter(|url| !url.is_empty() && unique.insert(url.clone()))
+        .take(50)
+        .collect()
+}
+
 impl ConfigStore {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
         let path = path.as_ref().to_path_buf();
-        let config: Config = toml::from_str(&fs::read_to_string(&path)?)?;
+        let mut config: Config = toml::from_str(&fs::read_to_string(&path)?)?;
+        config.resolver_history = normalize_history(config.resolver_history);
         config.validate()?;
         Ok(Self {
             path,
@@ -163,12 +173,13 @@ impl ConfigStore {
     pub fn replace(&self, mut config: Config) -> Result<(), ConfigError> {
         config.validate()?;
         let mut current = self.current.write().unwrap();
-        config.resolver_history = current.resolver_history.clone();
+        config.resolver_history = normalize_history(current.resolver_history.clone());
 
         for resolver in config.resolvers.iter().filter(|resolver| resolver.enabled) {
             config.resolver_history.retain(|url| url != &resolver.url);
             config.resolver_history.insert(0, resolver.url.clone());
         }
+        config.resolver_history = normalize_history(config.resolver_history);
         let data = toml::to_string_pretty(&config)?;
         let temp = self.path.with_extension("toml.tmp");
         fs::write(&temp, data)?;
@@ -177,7 +188,8 @@ impl ConfigStore {
         Ok(())
     }
     pub fn reload(&self) -> Result<(), ConfigError> {
-        let config: Config = toml::from_str(&fs::read_to_string(&self.path)?)?;
+        let mut config: Config = toml::from_str(&fs::read_to_string(&self.path)?)?;
+        config.resolver_history = normalize_history(config.resolver_history);
         config.validate()?;
         *self.current.write().unwrap() = config;
         Ok(())

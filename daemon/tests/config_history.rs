@@ -28,3 +28,17 @@ fn history_survives_reload_and_remains_unique() {
         ]
     );
 }
+
+#[test]
+fn loading_legacy_history_removes_duplicates_and_empty_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    let config = include_str!("../../module/config/config.toml.example");
+    fs::write(
+        &path,
+        format!("resolver_history = [\"\", \"https://example.com/dns-query\", \"https://example.com/dns-query\"]\n{config}"),
+    )
+    .unwrap();
+    let restored = ConfigStore::load(&path).unwrap().snapshot();
+    assert_eq!(restored.resolver_history, ["https://example.com/dns-query"]);
+}
