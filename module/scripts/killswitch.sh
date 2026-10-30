@@ -13,6 +13,8 @@ case "${1:-status}" in
 	install)
 		"$backend" -t filter -N "$CHAIN" 2>/dev/null || true
 		"$backend" -t filter -F "$CHAIN"
+		"$backend" -t filter -A "$CHAIN" -m owner --uid-owner 0 -j RETURN
+		"$backend" -t filter -A "$CHAIN" -m mark --mark 0x1000000/0x1000000 -j RETURN
 		"$backend" -t filter -A "$CHAIN" -p udp --dport 53 -j REJECT
 		"$backend" -t filter -A "$CHAIN" -p tcp --dport 53 -j REJECT
 		"$backend" -t filter -C OUTPUT -j "$CHAIN" 2>/dev/null || "$backend" -t filter -I OUTPUT 1 -j "$CHAIN"

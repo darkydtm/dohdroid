@@ -19,6 +19,8 @@ mkdir -p "$TMP/bin"
 ln -s iptables "$TMP/bin/iptables-legacy"
 export PATH="$TMP/bin:$PATH"
 sh "$TMP/module/scripts/killswitch.sh" install
+grep -q -- '-t filter -A DOHD_KILL -m owner --uid-owner 0 -j RETURN' "$TEST_LOG"
+grep -q -- '-t filter -A DOHD_KILL -m mark --mark 0x1000000/0x1000000 -j RETURN' "$TEST_LOG"
 grep -q -- '-t filter -A DOHD_KILL -p udp --dport 53 -j REJECT' "$TEST_LOG"
 grep -q -- '-t filter -A DOHD_KILL -p tcp --dport 53 -j REJECT' "$TEST_LOG"
 sh "$TMP/module/scripts/killswitch.sh" remove
