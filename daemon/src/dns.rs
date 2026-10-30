@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -18,7 +18,7 @@ pub trait DnsHandler: Send + Sync {
 
 pub struct DohHandler {
     config: ConfigStore,
-    pool: Mutex<(Vec<ResolverConfig>, FallbackMode, ResolverPool)>,
+    pool: Mutex<(Vec<ResolverConfig>, FallbackMode, Arc<ResolverPool>)>,
 }
 
 impl DohHandler {
@@ -27,7 +27,7 @@ impl DohHandler {
         let pool = ResolverPool::new(initial.resolvers.clone())?;
         Ok(Self {
             config,
-            pool: Mutex::new((initial.resolvers, initial.fallback_mode, pool)),
+            pool: Mutex::new((initial.resolvers, initial.fallback_mode, Arc::new(pool))),
         })
     }
 }
@@ -43,12 +43,14 @@ impl DnsHandler for DohHandler {
             *pool = (
                 config.resolvers.clone(),
                 config.fallback_mode,
-                ResolverPool::new(config.resolvers)?,
+                Arc::new(ResolverPool::new(config.resolvers)?),
             );
         }
-        let (_, fallback, resolver) = &mut *pool;
+        let fallback = pool.1.clone();
+        let resolver = Arc::clone(&pool.2);
+        drop(pool);
         resolver
-            .resolve(&query, fallback, connect_timeout, request_timeout)
+            .resolve(&query, &fallback, connect_timeout, request_timeout)
             .await
     }
 }
@@ -63,22 +65,30 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
     }
 
     pub async fn serve_udp(&self, socket: UdpSocket) -> Result<()> {
+        let socket = Arc::new(socket);
+        let permits = Arc::new(Semaphore::new(128));
         let mut buffer = [0u8; MAX_DNS_PACKET];
         loop {
+            let permit = Arc::clone(&permits).acquire_owned().await?;
             let (size, peer) = socket.recv_from(&mut buffer).await?;
             if size == 0 {
                 continue;
             }
-            let response = match self.handler.handle(buffer[..size].to_vec()).await {
-                Ok(response) => response,
-                Err(error) => {
-                    tracing::warn!(%error, "DNS query failed");
-                    continue;
+            let query = buffer[..size].to_vec();
+            let socket = Arc::clone(&socket);
+            let handler = Arc::clone(&self.handler);
+            tokio::spawn(async move {
+                let _permit = permit;
+                match handler.handle(query).await {
+                    Ok(response) if response.len() <= MAX_DNS_PACKET => {
+                        if let Err(error) = socket.send_to(&response, peer).await {
+                            tracing::warn!(%error, "DNS response failed");
+                        }
+                    }
+                    Ok(_) => tracing::warn!("DNS response too large"),
+                    Err(error) => tracing::warn!(%error, "DNS query failed"),
                 }
-            };
-            if response.len() <= MAX_DNS_PACKET {
-                socket.send_to(&response, peer).await?;
-            }
+            });
         }
     }
 

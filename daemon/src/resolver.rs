@@ -3,29 +3,35 @@ use crate::{
     doh::DohClient,
 };
 use anyhow::Result;
-use std::time::{Duration, Instant};
+use std::{
+    sync::Mutex,
+    time::{Duration, Instant},
+};
 
 pub struct ResolverPool {
     client: DohClient,
-    resolvers: Vec<(ResolverConfig, Option<Instant>)>,
+    resolvers: Vec<(ResolverConfig, Mutex<Option<Instant>>)>,
 }
 impl ResolverPool {
     pub fn new(resolvers: Vec<ResolverConfig>) -> Result<Self> {
         Ok(Self {
             client: DohClient::new(&resolvers)?,
-            resolvers: resolvers.into_iter().map(|r| (r, None)).collect(),
+            resolvers: resolvers
+                .into_iter()
+                .map(|r| (r, Mutex::new(None)))
+                .collect(),
         })
     }
     pub async fn resolve(
-        &mut self,
+        &self,
         query: &[u8],
         fallback: &FallbackMode,
         connect_timeout: Duration,
         request_timeout: Duration,
     ) -> Result<Vec<u8>> {
         let now = Instant::now();
-        for (resolver, cooldown) in &mut self.resolvers {
-            if !resolver.enabled || cooldown.is_some_and(|until| until > now) {
+        for (resolver, cooldown) in &self.resolvers {
+            if !resolver.enabled || cooldown.lock().unwrap().is_some_and(|until| until > now) {
                 continue;
             }
             match self
@@ -35,7 +41,8 @@ impl ResolverPool {
             {
                 Ok(response) => return Ok(response),
                 Err(error) => {
-                    *cooldown = Some(now + Duration::from_secs(resolver.cooldown_seconds));
+                    *cooldown.lock().unwrap() =
+                        Some(Instant::now() + Duration::from_secs(resolver.cooldown_seconds));
                     tracing::warn!(resolver = %resolver.name, %error, "resolver failed");
                 }
             }
