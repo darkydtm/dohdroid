@@ -8,23 +8,9 @@ pub struct DohClient {
     client: Client,
 }
 impl DohClient {
-    pub fn new(resolvers: &[ResolverConfig]) -> Result<Self> {
-        use std::net::ToSocketAddrs;
-        let mut builder = Client::builder().user_agent("dohd/0.1");
-        for resolver in resolvers.iter().filter(|resolver| resolver.enabled) {
-            let url = url::Url::parse(&resolver.url)?;
-            let host = url.host_str().context("resolver host missing")?;
-            let port = url
-                .port_or_known_default()
-                .context("resolver port missing")?;
-            let addresses: Vec<_> = (host, port).to_socket_addrs()?.collect();
-            if addresses.is_empty() {
-                anyhow::bail!("resolver hostname has no addresses: {host}");
-            }
-            builder = builder.resolve_to_addrs(host, &addresses);
-        }
+    pub fn new(_resolvers: &[ResolverConfig]) -> Result<Self> {
         Ok(Self {
-            client: builder.build()?,
+            client: Client::builder().user_agent("dohd/0.1").build()?,
         })
     }
     pub async fn resolve(&self, resolver: &ResolverConfig, query: &[u8]) -> Result<Vec<u8>> {
