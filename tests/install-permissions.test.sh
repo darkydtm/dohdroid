@@ -23,3 +23,26 @@ touch "$OLD_MODDIR/config/config.toml"
 rm -f "$MODPATH/config/daemon-enabled"
 . "$ROOT/module/customize.sh"
 [ ! -f "$MODPATH/config/daemon-enabled" ]
+
+cat > "$MODPATH/config/config.toml" <<'CONFIG'
+listen_address = "127.0.0.1"
+
+[[resolvers]]
+name = "cloudflare"
+url = "https://cloudflare-dns.com/dns-query"
+bootstrap_ips = ["1.1.1.1", "1.0.0.1"]
+enabled = true
+cooldown_seconds = 30
+
+[[resolvers]]
+name = "custom"
+url = "https://dns.example.org/dns-query"
+bootstrap_ips = []
+enabled = true
+cooldown_seconds = 30
+CONFIG
+export DOHD_OLD_MODDIR="$MODPATH"
+. "$ROOT/module/customize.sh"
+! grep -q 'cloudflare-dns.com' "$MODPATH/config/config.toml"
+! grep -q '1.1.1.1' "$MODPATH/config/config.toml"
+grep -q 'https://dns.example.org/dns-query' "$MODPATH/config/config.toml"

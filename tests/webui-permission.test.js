@@ -29,6 +29,8 @@ try {
 	assert.match(html, /id="resolverHistoryList"/);
 	assert.match(html, /id="killswitchMode"/);
 	assert.match(html, /id="daemonStatus"/);
+	assert.match(html, /id="themeMode"/);
+	assert.match(fs.readFileSync(path.join(root, 'module/webroot/js/app.js'), 'utf8'), /dohd-theme/);
 	assert.equal(fs.existsSync(path.join(root, 'webui-prototype.html')), false);
 	const request = fs.readFileSync(path.join(root, 'module/webroot/js/api.js'), 'utf8');
 	const context = { window: {}, Promise, JSON, Error };

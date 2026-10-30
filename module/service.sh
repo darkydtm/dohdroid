@@ -9,6 +9,18 @@ KILLSWITCH="$MODDIR/scripts/killswitch.sh"
 . "$MODDIR/scripts/private-dns.sh"
 . "$MODDIR/scripts/process.sh"
 . "$MODDIR/scripts/state.sh"
+
+resolver_enabled() {
+	awk '
+		/^[[:space:]]*enabled[[:space:]]*=/ {
+			value = $0
+			sub(/^[^=]*=[[:space:]]*/, "", value)
+			if (value == "true") found = 1
+		}
+		END { exit found ? 0 : 1 }
+	' "$MODDIR/config/config.toml"
+}
+
 mkdir -p "$MODDIR/run" "$MODDIR/config"
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 case "$(uname -m)" in
@@ -43,12 +55,17 @@ if [ -f "$MODDIR/run/tun.pid" ]; then
 	rm -f "$MODDIR/run/tun.pid"
 fi
 rm -f "$SOCKET" "$PIDFILE"
-if ! daemon_enabled; then
+if ! resolver_enabled; then
+	"$FIREWALL" remove || true
 	"$TUN_FIREWALL" remove || true
-	if [ -f "$MODDIR/run/tun.pid" ]; then
-		kill "$(cat "$MODDIR/run/tun.pid")" 2>/dev/null || true
-		rm -f "$MODDIR/run/tun.pid"
-	fi
+	"$KILLSWITCH" remove || true
+	private_dns_restore || true
+	exit 0
+fi
+if ! daemon_enabled; then
+	"$FIREWALL" remove || true
+	"$TUN_FIREWALL" remove || true
+	"$KILLSWITCH" remove || true
 	private_dns_restore || true
 	exit 0
 fi

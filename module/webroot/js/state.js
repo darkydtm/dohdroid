@@ -43,12 +43,12 @@
 		} catch {
 			parsed = null;
 		}
-		const urlValid = Boolean(parsed && parsed.protocol === 'https:' && parsed.hostname && parsed.pathname !== '/');
+		const urlValid = value === '' || Boolean(parsed && parsed.protocol === 'https:' && parsed.hostname && parsed.pathname !== '/');
 		const timeoutValue = Number.parseInt(elements.timeout.value.trim().replace(/\s*ms\s*$/i, ''), 10);
 		const timeoutValid = Number.isInteger(timeoutValue) && timeoutValue >= 100 && timeoutValue <= 60000;
 		elements.url.classList.toggle('invalid', !urlValid);
 		elements.timeout.classList.toggle('invalid', !timeoutValid);
-		elements.resolverError.textContent = urlValid ? '' : 'Enter a valid HTTPS DoH URL.';
+		elements.resolverError.textContent = urlValid ? '' : 'Enter a valid HTTPS DoH URL or leave it empty for system DNS.';
 		elements.timeoutError.textContent = timeoutValid ? '' : 'Use a timeout from 100 to 60000 ms.';
 		return urlValid && timeoutValid;
 	}
@@ -82,7 +82,17 @@
 				elements.errors.textContent = '-';
 			}
 			const resolver = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
-			if (resolver) elements.url.value = resolver.url;
+			elements.url.value = resolver ? resolver.url : '';
+			if (!resolver) {
+				elements.tunMode.value = 'off';
+				elements.killswitchMode.value = 'off';
+				elements.daemonStatusText.textContent = 'No DoH resolver configured. System DNS is in use.';
+				elements.tunMode.disabled = true;
+				elements.killswitchMode.disabled = true;
+			} else {
+				elements.tunMode.disabled = false;
+				elements.killswitchMode.disabled = false;
+			}
 			showHistory(config);
 			elements.timeout.value = `${config.request_timeout_ms} ms`;
 			elements.fallback.value = config.fallback_mode;
@@ -97,10 +107,21 @@
 		if (!validate()) return;
 		try {
 			const config = await window.dohdApi.request('get_config');
-			const active = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
-			if (!active) throw new Error('No resolver configured');
-			if (active.url !== elements.url.value.trim()) active.bootstrap_ips = [];
-			active.url = elements.url.value.trim();
+			const url = elements.url.value.trim();
+			if (url === '') {
+				config.resolvers = [];
+			} else {
+				const active = config.resolvers.find((item) => item.enabled) || config.resolvers[0] || {
+					name: 'custom',
+					bootstrap_ips: [],
+					enabled: true,
+					cooldown_seconds: 30,
+				};
+				if (active.url !== url) active.bootstrap_ips = [];
+				active.url = url;
+				active.enabled = true;
+				config.resolvers = [active];
+			}
 			config.request_timeout_ms = Number.parseInt(elements.timeout.value, 10);
 			config.fallback_mode = elements.fallback.value;
 			await window.dohdApi.request('put_config', config);

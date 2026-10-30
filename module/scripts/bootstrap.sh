@@ -2,6 +2,12 @@
 set -eu
 
 config=$1
+bootstrap_line=$(awk '/^bootstrap_ips = / { print; exit }' "$config")
+normalized_bootstrap_line=$(printf '%s' "$bootstrap_line" | tr -d '[:space:]')
+case "$normalized_bootstrap_line" in
+	bootstrap_ips=\[\]) ;;
+	*) exit 0 ;;
+esac
 url=$(awk '/^url = / { gsub(/^url = "|"$/, ""); print; exit }' "$config")
 [ -n "$url" ] || exit 0
 case "$url" in
@@ -12,12 +18,19 @@ host=${url#https://}
 host=${host%%/*}
 host=${host%%:*}
 bootstrap=
-for _ in 1 2 3 4 5 6 7 8 9 10; do
+attempts=${DOHD_BOOTSTRAP_ATTEMPTS:-60}
+delay=${DOHD_BOOTSTRAP_DELAY:-2}
+case "$attempts" in ''|*[!0-9]*) attempts=60 ;; esac
+case "$delay" in ''|*[!0-9]*) delay=2 ;; esac
+
+i=1
+while [ "$i" -le "$attempts" ]; do
 	bootstrap=$(ping -c 1 -W 1 "$host" 2>/dev/null | sed -n 's/^PING [^(]*(\([^)]*\)).*/\1/p' | head -n 1)
 	case "$bootstrap" in
-		''|*[!0-9.]*) sleep 1 ;;
+		''|*[!0-9.]*) sleep "$delay" ;;
 		*) break ;;
 	esac
+	i=$((i + 1))
 done
 case "$bootstrap" in
 	''|*[!0-9.]*) exit 1 ;;

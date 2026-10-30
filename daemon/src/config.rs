@@ -47,6 +47,7 @@ pub struct Config {
     pub fallback_mode: FallbackMode,
     #[serde(default)]
     pub resolver_history: Vec<String>,
+    #[serde(default)]
     pub resolvers: Vec<ResolverConfig>,
 }
 
@@ -103,7 +104,6 @@ impl Config {
             ));
         }
         let mut names = std::collections::HashSet::new();
-        let mut enabled = 0;
         for resolver in &self.resolvers {
             if resolver.name.is_empty() || !names.insert(&resolver.name) {
                 return Err(ConfigError::Invalid(
@@ -121,14 +121,6 @@ impl Config {
                 ip.parse::<IpAddr>()
                     .map_err(|_| ConfigError::Invalid(format!("invalid bootstrap IP: {ip}")))?;
             }
-            if resolver.enabled {
-                enabled += 1;
-            }
-        }
-        if enabled == 0 {
-            return Err(ConfigError::Invalid(
-                "at least one resolver must be enabled".into(),
-            ));
         }
         Ok(())
     }

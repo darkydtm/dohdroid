@@ -5,10 +5,4 @@ request_timeout_ms = 5000
 cache_enabled = true
 cache_capacity = 4096
 fallback_mode = "system"
-
-[[resolvers]]
-name = "cloudflare"
-url = "https://cloudflare-dns.com/dns-query"
-bootstrap_ips = ["1.1.1.1", "1.0.0.1"]
-enabled = true
-cooldown_seconds = 30
+resolvers = []

@@ -16,6 +16,32 @@ if [ -f "$old_config" ] && [ "$MODPATH/config/config.toml" != "$old_config" ]; t
 	cp "$old_config" "$MODPATH/config/config.toml"
 	set_perm "$MODPATH/config/config.toml" 0 0 0600
 fi
+if [ -f "$MODPATH/config/config.toml" ] && grep -Fq 'url = "https://cloudflare-dns.com/dns-query"' "$MODPATH/config/config.toml"; then
+	tmp="$MODPATH/config/config.toml.migrate"
+	awk '
+		function flush() {
+			if (block !~ /url = "https:\/\/cloudflare-dns\.com\/dns-query"/) printf "%s", block
+			block = ""
+		}
+		/^\[\[resolvers\]\]$/ {
+			if (in_resolver) flush()
+			in_resolver = 1
+			block = $0 "\n"
+			next
+		}
+		/^\[/ {
+			if (in_resolver) flush()
+			in_resolver = 0
+			print
+			next
+		}
+		in_resolver { block = block $0 "\n"; next }
+		{ print }
+		END { if (in_resolver) flush() }
+	' "$MODPATH/config/config.toml" > "$tmp"
+	mv "$tmp" "$MODPATH/config/config.toml"
+	set_perm "$MODPATH/config/config.toml" 0 0 0600
+fi
 
 if [ ! -d "$old_moddir/config" ]; then
 	touch "$MODPATH/config/daemon-enabled"
