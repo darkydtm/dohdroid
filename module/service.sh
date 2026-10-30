@@ -23,6 +23,9 @@ resolver_enabled() {
 }
 
 mkdir -p "$MODDIR/run" "$MODDIR/config"
+exec 9>"$MODDIR/run/service.lock"
+flock -x 9
+if [ "${1:-}" = boot ] && daemon_running; then exit 0; fi
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 if daemon_enabled && resolver_enabled; then
 	update_description ERROR
@@ -81,7 +84,7 @@ if ! "$MODDIR/scripts/bootstrap.sh" "$MODDIR/config/config.toml"; then
 	echo "DoH resolver bootstrap lookup failed" >&2
 	exit 1
 fi
-DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" DOHD_WEB_ROOT="$MODDIR/webroot" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
+DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" DOHD_WEB_ROOT="$MODDIR/webroot" "$BINARY" 9>&- >"$MODDIR/run/dohd.log" 2>&1 &
 pid=$!
 echo "$pid" > "$PIDFILE"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -107,7 +110,7 @@ if tun_enabled; then
 	port=$(awk -F= '/^[[:space:]]*listen_port[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$MODDIR/config/config.toml")
 	case "$port" in ''|*[!0-9]*) port=5353 ;; esac
 	sed "s/\"server_port\": 5353/\"server_port\": $port/" "$MODDIR/config/tun.json" > "$MODDIR/run/tun.json"
-	"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/run/tun.json" >>"$MODDIR/run/tun.log" 2>&1 &
+	"$MODDIR/system/bin/$ABI/sing-box" run -c "$MODDIR/run/tun.json" 9>&- >>"$MODDIR/run/tun.log" 2>&1 &
 	tun_pid=$!
 	echo "$tun_pid" > "$MODDIR/run/tun.pid"
 	for _ in 1 2 3 4 5 6 7 8 9 10; do

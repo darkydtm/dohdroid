@@ -17,12 +17,18 @@ SCRIPT
 cat > "$TMP/module/service.sh" <<'SCRIPT'
 printf '%s\n' started >> "$TEST_LOG"
 SCRIPT
-export TEST_LOG="$TMP/log" DOHD_BOOT_RECOVERY_DELAY=0
+cat > "$TMP/module/scripts/sleep" <<'SCRIPT'
+#!/bin/sh
+printf 'sleep:%s\n' "$1" >> "$TEST_LOG"
+SCRIPT
+chmod +x "$TMP/module/scripts/sleep"
+export TEST_LOG="$TMP/log" PATH="$TMP/module/scripts:$PATH"
 sh "$TMP/module/boot-completed.sh"
 [ ! -f "$TEST_LOG" ]
 touch "$TMP/module/config/daemon-enabled"
 sh "$TMP/module/boot-completed.sh"
-[ "$(wc -l < "$TEST_LOG")" -eq 1 ]
+[ "$(grep -c '^started$' "$TEST_LOG")" -eq 1 ]
+if grep -q '^sleep:' "$TEST_LOG"; then exit 1; fi
 touch "$TMP/module/run/running"
 sh "$TMP/module/boot-completed.sh"
-[ "$(wc -l < "$TEST_LOG")" -eq 1 ]
+[ "$(grep -c '^started$' "$TEST_LOG")" -eq 1 ]
