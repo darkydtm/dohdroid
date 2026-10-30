@@ -2,5 +2,5 @@ id=doh-dns
 name=DoH DNS
 version=0.1.0
 versionCode=1
-author=dohdroid
-description=Rust DoH DNS proxy. Action button toggles DNS redirect on/off. Uses UDP/TCP DNS on loopback and HTTPS DoH resolvers.
+author=github.com/darkydtm
+description=Rust DoH DNS proxy
