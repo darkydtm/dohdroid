@@ -62,14 +62,18 @@ async fn main() -> anyhow::Result<()> {
     let tcp_server = Arc::clone(&dns_server);
     tokio::spawn(async move { udp_server.serve_udp(udp).await });
     tokio::spawn(async move { tcp_server.serve_tcp(tcp).await });
+    let web_address = env::var("DOHD_WEB_ADDRESS")
+        .unwrap_or_else(|_| "127.0.0.1:8080".to_string())
+        .parse()?;
+    let web_root = env::var_os("DOHD_WEB_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("webroot"));
     let web_state = dohd::web::WebState {
         config: config.clone(),
         cache: Arc::clone(&cache),
         runtime: Arc::clone(&runtime),
+        web_root,
     };
-    let web_address = env::var("DOHD_WEB_ADDRESS")
-        .unwrap_or_else(|_| "127.0.0.1:8080".to_string())
-        .parse()?;
     tokio::spawn(async move {
         if let Err(error) = dohd::web::serve_web(web_state, web_address).await {
             tracing::error!(%error, "web UI stopped");

@@ -18,7 +18,12 @@ try {
 	fs.chmodSync(path.join(scripts, 'webui.sh'), 0o644);
 	fs.writeFileSync(path.join(bin, 'dohd'), '#!/bin/sh\ncat >/dev/null\nprintf \'{"ok":true,"result":"ok"}\\n\'\n', { mode: 0o755 });
 	const html = fs.readFileSync(path.join(root, 'module/webroot/index.html'), 'utf8');
-	const request = html.slice(html.indexOf('\t\tlet callbackId = 0;'), html.indexOf('\t\tfunction validate()'));
+	assert.match(html, /href="styles\.css"/);
+	assert.match(html, /src="js\/api\.js"/);
+	assert.match(html, /src="js\/state\.js"/);
+	assert.match(html, /src="js\/app\.js"/);
+	assert.equal(fs.existsSync(path.join(root, 'webui-prototype.html')), false);
+	const request = fs.readFileSync(path.join(root, 'module/webroot/js/api.js'), 'utf8');
 	const context = { window: {}, Promise, JSON, Error };
 	context.ksu = context.window.ksu = {
 		exec(command, options, callback) {
@@ -28,7 +33,7 @@ try {
 	};
 	vm.createContext(context);
 	vm.runInContext(request, context);
-	context.request('status').then(result => assert.equal(result, 'ok')).catch(error => {
+	context.window.dohdApi.request('status').then(result => assert.equal(result, 'ok')).catch(error => {
 		console.error(error);
 		process.exitCode = 1;
 	});

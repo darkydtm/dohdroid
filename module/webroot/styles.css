@@ -1,0 +1,60 @@
+:root {
+	color-scheme: dark;
+	--md-sys-color-primary: #b9c8ff;
+	--md-sys-color-on-primary: #142d60;
+	--md-sys-color-primary-container: #304578;
+	--md-sys-color-on-primary-container: #dce2ff;
+	--md-sys-color-secondary-container: #3d465d;
+	--md-sys-color-on-secondary-container: #dbe2f9;
+	--md-sys-color-error: #ffb4ab;
+	--md-sys-color-on-error-container: #ffdad6;
+	--md-sys-color-error-container: #93000a;
+	--md-sys-color-surface: #101318;
+	--md-sys-color-surface-container-low: #191c22;
+	--md-sys-color-surface-container: #1d2026;
+	--md-sys-color-surface-container-high: #282b32;
+	--md-sys-color-on-surface: #e2e2e9;
+	--md-sys-color-on-surface-variant: #c3c6d0;
+	--md-sys-color-outline: #8d9099;
+	--md-sys-color-outline-variant: #43474f;
+	--md-sys-shape-small: 8px;
+	--md-sys-shape-medium: 12px;
+	--md-sys-shape-large: 16px;
+	--md-sys-shape-full: 999px;
+	--md-typescale-display: clamp(2.1rem, 6vw, 3.5rem);
+	--md-typescale-title: 1.4rem;
+	--md-typescale-body: 1rem;
+	--md-typescale-label: .75rem;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); font-family: Roboto, system-ui, sans-serif; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.app { min-height: 100dvh; display: flex; }
+.main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
+.content { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); gap: 20px; }
+.card { overflow: hidden; border-radius: var(--md-sys-shape-large); background: var(--md-sys-color-surface-container); }
+.card-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; }
+.card-title { margin: 0; font-size: 1.05rem; font-weight: 500; }
+.card-support { color: var(--md-sys-color-on-surface-variant); font-size: .8rem; }
+.card-body { padding: 0 20px 20px; }
+.field { display: grid; gap: 8px; margin-top: 18px; }
+label { color: var(--md-sys-color-on-surface-variant); font-size: var(--md-typescale-label); }
+input, select { width: 100%; border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-small); padding: 14px 16px; outline: 0; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
+input:focus, select:focus { border-color: var(--md-sys-color-primary); box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+input.invalid, select.invalid { border-color: var(--md-sys-color-error); box-shadow: 0 0 0 2px var(--md-sys-color-error-container); }
+.error { min-height: 1em; color: var(--md-sys-color-error); font-size: .75rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+button { min-height: 40px; border: 0; border-radius: var(--md-sys-shape-full); padding: 0 20px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 600; }
+button.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+button:active { transform: scale(.98); }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; }
+.metric { padding: 20px; background: var(--md-sys-color-surface-container-high); }
+.metric:nth-child(odd) { border-right: 1px solid var(--md-sys-color-outline-variant); }
+.metric:nth-child(-n+2) { border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+.metric-value { font-size: 1.6rem; font-weight: 500; }
+.metric-label { margin-top: 7px; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-typescale-label); }
+.log { margin-top: 20px; padding: 16px 20px; border-radius: var(--md-sys-shape-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface-variant); font-family: monospace; font-size: .75rem; line-height: 1.8; }
+.log strong { color: var(--md-sys-color-primary); font-weight: 400; }
+.build-info { margin-top: 20px; color: var(--md-sys-color-outline); font: .7rem monospace; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .main { width: min(100% - 32px, 620px); padding-top: 20px; } .content { grid-template-columns: 1fr; } }

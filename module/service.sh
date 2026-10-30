@@ -41,7 +41,7 @@ if [ -f "$MODDIR/run/tun.pid" ]; then
 fi
 rm -f "$SOCKET" "$PIDFILE"
 private_dns_restore || exit 1
-DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
+DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" DOHD_WEB_ROOT="$MODDIR/webroot" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
 pid=$!
 echo "$pid" > "$PIDFILE"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
