@@ -32,3 +32,21 @@ exit 1
 SCRIPT
 PATH="$TMP/bin:$PATH" sh "$ROOT/module/scripts/bootstrap.sh" "$TMP/config-with-bootstrap.toml"
 grep -q 'bootstrap_ips = \["45.90.28.78"\]' "$TMP/config-with-bootstrap.toml"
+
+cat > "$TMP/bin/ping" <<'SCRIPT'
+#!/bin/sh
+printf '%s\n' 'PING active.example (203.0.113.1): 56 data bytes'
+SCRIPT
+cat > "$TMP/config-active.toml" <<'CONFIG'
+[[resolvers]]
+url = "https://inactive.example/dns"
+bootstrap_ips = ["192.0.2.1"]
+enabled = false
+
+[[resolvers]]
+url = "https://active.example/dns"
+bootstrap_ips = []
+enabled = true
+CONFIG
+PATH="$TMP/bin:$PATH" sh "$ROOT/module/scripts/bootstrap.sh" "$TMP/config-active.toml"
+grep -q 'bootstrap_ips = \["203.0.113.1"\]' "$TMP/config-active.toml"

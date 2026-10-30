@@ -2,13 +2,22 @@
 set -eu
 
 config=$1
-bootstrap_line=$(awk '/^bootstrap_ips = / { print; exit }' "$config")
-normalized_bootstrap_line=$(printf '%s' "$bootstrap_line" | tr -d '[:space:]')
-case "$normalized_bootstrap_line" in
-	bootstrap_ips=\[\]) ;;
-	*) exit 0 ;;
-esac
-url=$(awk '/^url = / { gsub(/^url = "|"$/, ""); print; exit }' "$config")
+url=$(awk '
+	function select_resolver() {
+		if (!found && url != "" && empty && enabled != "false") {
+			print url
+			found = 1
+		}
+		url = ""
+		empty = 0
+		enabled = "true"
+	}
+	/^\[/ { select_resolver(); next }
+	/^url = / { url = $0; sub(/^url = "/, "", url); sub(/"$/, "", url) }
+	/^bootstrap_ips = / { value = $0; gsub(/[[:space:]]/, "", value); empty = value == "bootstrap_ips=[]" }
+	/^enabled = / { enabled = $3 }
+	END { select_resolver() }
+' "$config")
 [ -n "$url" ] || exit 0
 case "$url" in
 	https://*) ;;
@@ -52,3 +61,4 @@ awk -v target="$url" -v ip="$bootstrap" '
 ' "$config" > "$tmp"
 chmod 0600 "$tmp"
 mv "$tmp" "$config"
+exec sh "$0" "$config"
