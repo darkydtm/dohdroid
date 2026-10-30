@@ -33,6 +33,9 @@ daemon_enabled() { [ -f "$MODDIR/config/daemon-enabled" ]; }
 tun_enabled() { [ -f "$MODDIR/config/tun-enabled" ]; }
 killswitch_enabled() { [ -f "$MODDIR/config/killswitch-enabled" ]; }
 SCRIPT
+cat > "$MODDIR/scripts/description.sh" <<'SCRIPT'
+update_description() { :; }
+SCRIPT
 chmod +x "$MODDIR/scripts/"*.sh
 cp "$ROOT/module/config/config.toml.example" "$MODDIR/config/config.toml"
 touch "$MODDIR/config/daemon-enabled"

@@ -11,6 +11,9 @@ SCRIPT
 cat > "$TMP/module/scripts/process.sh" <<'SCRIPT'
 daemon_running() { [ -f "$MODDIR/run/running" ]; }
 SCRIPT
+cat > "$TMP/module/scripts/description.sh" <<'SCRIPT'
+update_description() { :; }
+SCRIPT
 cat > "$TMP/module/service.sh" <<'SCRIPT'
 printf '%s\n' started >> "$TEST_LOG"
 SCRIPT

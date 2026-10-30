@@ -9,6 +9,7 @@ KILLSWITCH="$MODDIR/scripts/killswitch.sh"
 . "$MODDIR/scripts/private-dns.sh"
 . "$MODDIR/scripts/process.sh"
 . "$MODDIR/scripts/state.sh"
+. "$MODDIR/scripts/description.sh"
 
 resolver_enabled() {
 	awk '
@@ -23,6 +24,11 @@ resolver_enabled() {
 
 mkdir -p "$MODDIR/run" "$MODDIR/config"
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
+if daemon_enabled && resolver_enabled; then
+	update_description ERROR
+else
+	update_description OFF
+fi
 case "$(uname -m)" in
 	aarch64) ABI=arm64-v8a ;;
 	armv7l|armv8l|arm) ABI=armeabi-v7a ;;
@@ -125,3 +131,4 @@ elif ! "$FIREWALL" install; then
 	exit 1
 fi
 if ! tun_enabled && killswitch_enabled; then "$KILLSWITCH" install || exit 1; fi
+update_description ON

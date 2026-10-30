@@ -45,6 +45,7 @@ jobs:
       - run: sh tests/firewall.test.sh
       - run: sh tests/bootstrap.test.sh
       - run: sh tests/boot-recovery.test.sh
+      - run: sh tests/description.test.sh
       - run: sh tests/killswitch.test.sh
       - run: sh tests/default-config.test.sh
       - run: sh tests/service-system-dns.test.sh
