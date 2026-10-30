@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n module/service.sh module/uninstall.sh module/action.sh module/customize.sh package.sh module/scripts/*.sh scripts/*.sh
+      - run: bash -n module/service.sh module/boot-completed.sh module/uninstall.sh module/action.sh module/customize.sh package.sh module/scripts/*.sh scripts/*.sh
       - run: node tests/webui-permission.test.js
       - run: node tests/webui-theme.test.js
       - run: node tests/build-info.test.js
@@ -44,6 +44,8 @@ jobs:
       - run: sh tests/private-dns.test.sh
       - run: sh tests/firewall.test.sh
       - run: sh tests/bootstrap.test.sh
+      - run: sh tests/boot-recovery.test.sh
+      - run: sh tests/killswitch.test.sh
       - run: sh tests/default-config.test.sh
       - run: sh tests/service-system-dns.test.sh
       - run: bash -n module/scripts/bootstrap.sh
@@ -127,7 +129,7 @@ jobs:
           mkdir sing-box-dist
           tar -xzf sing-box.tar.gz -C sing-box-dist --strip-components=1
           mkdir -p "module/package/config" "module/package/system/bin/${{ matrix.abi }}"
-          cp module/module.prop module/service.sh module/uninstall.sh module/action.sh module/customize.sh module/package/
+          cp module/module.prop module/service.sh module/boot-completed.sh module/uninstall.sh module/action.sh module/customize.sh module/package/
           cp module/config/config.toml.example module/config/tun.json module/package/config/
           cp -R module/scripts module/package/scripts
           cp -R module/webroot module/package/webroot
@@ -167,6 +169,7 @@ jobs:
           unzip -Z1 "$archive" | grep -Fx 'scripts/firewall.sh'
           unzip -Z1 "$archive" | grep -Fx 'scripts/webui.sh'
           unzip -Z1 "$archive" | grep -Fx 'customize.sh'
+          unzip -Z1 "$archive" | grep -Fx 'boot-completed.sh'
           unzip -Z1 "$archive" | grep -Fx 'webroot/index.html'
           unzip -Z1 "$archive" | grep -Fx 'webroot/styles.css'
           unzip -Z1 "$archive" | grep -Fx 'webroot/js/api.js'
