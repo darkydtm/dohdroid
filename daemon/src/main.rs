@@ -141,7 +141,11 @@ async fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("run/dohd.sock"));
     let config_value = config.snapshot();
-    let handler = Arc::new(dohd::dns::DohHandler::new(config.clone())?);
+    let handler = Arc::new(dohd::cache::CachingHandler::new(
+        dohd::dns::DohHandler::new(config.clone())?,
+        Arc::clone(&cache),
+        config_value.cache_enabled,
+    ));
     let udp = tokio::net::UdpSocket::bind((
         config_value.listen_address.as_str(),
         config_value.listen_port,
