@@ -30,10 +30,20 @@ impl ResolverPool {
         request_timeout: Duration,
     ) -> Result<Vec<u8>> {
         let now = Instant::now();
-        for (resolver, cooldown) in &self.resolvers {
-            if !resolver.enabled || cooldown.lock().unwrap().is_some_and(|until| until > now) {
-                continue;
-            }
+        let enabled = || {
+            self.resolvers
+                .iter()
+                .filter(|(resolver, _)| resolver.enabled)
+        };
+        let ready: Vec<_> = enabled()
+            .filter(|(_, cooldown)| !cooldown.lock().unwrap().is_some_and(|until| until > now))
+            .collect();
+        let candidates = if ready.is_empty() {
+            enabled().collect()
+        } else {
+            ready
+        };
+        for (resolver, cooldown) in candidates {
             match self
                 .client
                 .resolve(resolver, query, connect_timeout, request_timeout)
