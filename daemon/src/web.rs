@@ -4,15 +4,16 @@ use crate::{
     runtime::Runtime,
 };
 use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Html,
+    extract::{Path as AxumPath, State},
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
 use serde_json::{json, Value};
 use std::{
     net::SocketAddr,
+    path::{Component, Path, PathBuf},
     sync::{Arc, Mutex},
 };
 use tokio::net::TcpListener;
@@ -22,6 +23,7 @@ pub struct WebState {
     pub config: ConfigStore,
     pub cache: Arc<Mutex<DnsCache>>,
     pub runtime: Arc<Mutex<Runtime>>,
+    pub web_root: PathBuf,
 }
 
 pub fn router(state: WebState) -> Router {
@@ -30,11 +32,48 @@ pub fn router(state: WebState) -> Router {
         .route("/api/status", get(status))
         .route("/api/config", get(get_config).put(put_config))
         .route("/api/cache/clear", post(clear_cache))
+        .route("/{*path}", get(asset))
         .with_state(state)
 }
 
-async fn index() -> Html<&'static str> {
-    Html(include_str!("../../webui-prototype.html"))
+async fn index(State(state): State<WebState>) -> Result<Response, StatusCode> {
+    asset_file(&state.web_root, "index.html").await
+}
+
+async fn asset(
+    State(state): State<WebState>,
+    AxumPath(path): AxumPath<String>,
+) -> Result<Response, StatusCode> {
+    asset_file(&state.web_root, &path).await
+}
+
+async fn asset_file(root: &Path, relative_path: &str) -> Result<Response, StatusCode> {
+    let relative_path = Path::new(relative_path);
+    if relative_path.components().any(|component| {
+        matches!(
+            component,
+            Component::CurDir | Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        )
+    }) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let path = root.join(relative_path);
+    let content = tokio::fs::read(path)
+        .await
+        .map_err(|error| match error.kind() {
+            std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        })?;
+    let content_type = match relative_path
+        .extension()
+        .and_then(|extension| extension.to_str())
+    {
+        Some("css") => "text/css; charset=utf-8",
+        Some("js") => "application/javascript; charset=utf-8",
+        Some("html") => "text/html; charset=utf-8",
+        _ => "application/octet-stream",
+    };
+    Ok(([(header::CONTENT_TYPE, content_type)], content).into_response())
 }
 
 async fn status(State(state): State<WebState>) -> Json<Value> {

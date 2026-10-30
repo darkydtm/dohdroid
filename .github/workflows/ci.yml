@@ -161,6 +161,10 @@ jobs:
           unzip -Z1 "$archive" | grep -Fx 'scripts/webui.sh'
           unzip -Z1 "$archive" | grep -Fx 'customize.sh'
           unzip -Z1 "$archive" | grep -Fx 'webroot/index.html'
+          unzip -Z1 "$archive" | grep -Fx 'webroot/styles.css'
+          unzip -Z1 "$archive" | grep -Fx 'webroot/js/api.js'
+          unzip -Z1 "$archive" | grep -Fx 'webroot/js/state.js'
+          unzip -Z1 "$archive" | grep -Fx 'webroot/js/app.js'
           unzip -Z1 "$archive" | grep -Fx 'webroot/build-info.js'
           unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/dohd"
           unzip -Z1 "$archive" | grep -Fx "system/bin/${{ matrix.abi }}/sing-box"
