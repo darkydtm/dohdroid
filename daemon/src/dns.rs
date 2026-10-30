@@ -3,6 +3,7 @@ use tokio::sync::{Mutex, Semaphore};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use hickory_proto::op::{Message, MessageType, ResponseCode};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, UdpSocket};
 
@@ -55,6 +56,34 @@ impl DnsHandler for DohHandler {
     }
 }
 
+fn servfail(query: &[u8]) -> Option<Vec<u8>> {
+    let query = Message::from_vec(query).ok()?;
+    let mut response = Message::new();
+    response
+        .set_id(query.id())
+        .set_message_type(MessageType::Response)
+        .set_op_code(query.op_code())
+        .set_recursion_desired(query.recursion_desired())
+        .set_recursion_available(true)
+        .set_response_code(ResponseCode::ServFail);
+    response.add_queries(query.queries().iter().cloned());
+    response.to_vec().ok()
+}
+
+async fn answer<H: DnsHandler + ?Sized>(handler: &H, query: Vec<u8>) -> Option<Vec<u8>> {
+    match handler.handle(query.clone()).await {
+        Ok(response) if response.len() <= MAX_DNS_PACKET => Some(response),
+        Ok(_) => {
+            tracing::warn!("DNS response too large");
+            servfail(&query)
+        }
+        Err(error) => {
+            tracing::warn!(%error, "DNS query failed");
+            servfail(&query)
+        }
+    }
+}
+
 pub struct DnsServer<H> {
     handler: Arc<H>,
 }
@@ -79,14 +108,10 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
             let handler = Arc::clone(&self.handler);
             tokio::spawn(async move {
                 let _permit = permit;
-                match handler.handle(query).await {
-                    Ok(response) if response.len() <= MAX_DNS_PACKET => {
-                        if let Err(error) = socket.send_to(&response, peer).await {
-                            tracing::warn!(%error, "DNS response failed");
-                        }
+                if let Some(response) = answer(handler.as_ref(), query).await {
+                    if let Err(error) = socket.send_to(&response, peer).await {
+                        tracing::warn!(%error, "DNS response failed");
                     }
-                    Ok(_) => tracing::warn!("DNS response too large"),
-                    Err(error) => tracing::warn!(%error, "DNS query failed"),
                 }
             });
         }
@@ -104,10 +129,9 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
                     }
                     let mut query = vec![0u8; length];
                     stream.read_exact(&mut query).await?;
-                    let response: Vec<u8> = handler.handle(query).await?;
-                    if response.len() > MAX_DNS_PACKET {
-                        anyhow::bail!("DNS response too large");
-                    }
+                    let Some(response) = answer(handler.as_ref(), query).await else {
+                        anyhow::bail!("DNS query could not be answered");
+                    };
                     stream.write_u16(response.len() as u16).await?;
                     stream.write_all(&response).await?;
                 }
