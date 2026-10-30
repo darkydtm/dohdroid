@@ -16,9 +16,11 @@ try {
 	fs.mkdirSync(bin, { recursive: true });
 	fs.copyFileSync(path.join(root, 'module/scripts/webui.sh'), path.join(scripts, 'webui.sh'));
 	fs.copyFileSync(path.join(root, 'module/scripts/state.sh'), path.join(scripts, 'state.sh'));
+	fs.copyFileSync(path.join(root, 'module/scripts/process.sh'), path.join(scripts, 'process.sh'));
 	fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
+	fs.copyFileSync(path.join(root, 'module/config/config.toml.example'), path.join(dir, 'config/config.toml.example'));
 	fs.chmodSync(path.join(scripts, 'webui.sh'), 0o644);
-	fs.writeFileSync(path.join(bin, 'dohd'), '#!/bin/sh\ncat >/dev/null\nprintf \'{"ok":true,"result":"ok"}\\n\'\n', { mode: 0o755 });
+	fs.writeFileSync(path.join(bin, 'dohd'), '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "' + path.join(dir, 'dohd.log') + '"\ncat >/dev/null\nprintf \'{"ok":true,"result":"ok"}\\n\'\n', { mode: 0o755 });
 	const html = fs.readFileSync(path.join(root, 'module/webroot/index.html'), 'utf8');
 	assert.match(html, /href="styles\.css"/);
 	assert.match(html, /src="js\/api\.js"/);
@@ -26,6 +28,7 @@ try {
 	assert.match(html, /src="js\/app\.js"/);
 	assert.match(html, /id="resolverHistoryList"/);
 	assert.match(html, /id="killswitchMode"/);
+	assert.match(html, /id="daemonStatus"/);
 	assert.equal(fs.existsSync(path.join(root, 'webui-prototype.html')), false);
 	const request = fs.readFileSync(path.join(root, 'module/webroot/js/api.js'), 'utf8');
 	const context = { window: {}, Promise, JSON, Error };
@@ -41,7 +44,9 @@ try {
 		console.error(error);
 		process.exitCode = 1;
 	});
+	assert.match(fs.readFileSync(path.join(dir, 'dohd.log'), 'utf8'), /config .*config\.toml/);
 	assert.match(fs.readFileSync(path.join(root, 'module/webroot/js/state.js'), 'utf8'), /killswitch-status/);
+	assert.match(fs.readFileSync(path.join(root, 'module/webroot/js/state.js'), 'utf8'), /daemon-status/);
 } finally {
 	fs.rmSync(dir, { recursive: true, force: true });
 }

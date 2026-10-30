@@ -34,6 +34,11 @@ button { cursor: pointer; }
 .main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 56px; }
 .content { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); gap: 20px; }
 .card { overflow: hidden; border-radius: var(--md-sys-shape-large); background: var(--md-sys-color-surface-container); }
+.daemon-card { grid-column: 1 / -1; }
+.status-badge { border-radius: var(--md-sys-shape-full); padding: 6px 10px; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); font-size: .75rem; }
+.status-badge.running { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.status-badge.stopped { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+.daemon-status-text { margin: 0; color: var(--md-sys-color-on-surface-variant); }
 .card-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; }
 .card-title { margin: 0; font-size: 1.05rem; font-weight: 500; }
 .card-support { color: var(--md-sys-color-on-surface-variant); font-size: .8rem; }

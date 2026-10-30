@@ -1,10 +1,98 @@
-use dohd::{cache::DnsCache, config::ConfigStore, control, runtime::Runtime};
+use dohd::{
+    cache::DnsCache,
+    config::{Config, ConfigStore},
+    control,
+    runtime::Runtime,
+};
+use serde::{Deserialize, Serialize};
 use std::{
     env,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+#[derive(Deserialize)]
+struct ConfigRequest {
+    api_version: u32,
+    operation: String,
+    config: Option<Config>,
+}
+
+#[derive(Serialize)]
+struct ConfigResponse<T> {
+    ok: bool,
+    api_version: u32,
+    result: Option<T>,
+    error_code: Option<String>,
+}
+
+async fn run_config(path: PathBuf) -> anyhow::Result<()> {
+    let store = match ConfigStore::load(path) {
+        Ok(store) => store,
+        Err(error) => {
+            println!(
+                "{}",
+                serde_json::to_string(&ConfigResponse::<serde_json::Value> {
+                    ok: false,
+                    api_version: 1,
+                    result: None,
+                    error_code: Some(error.to_string()),
+                })?
+            );
+            return Ok(());
+        }
+    };
+    let mut input = BufReader::new(io::stdin()).lines();
+    while let Some(line) = input.next_line().await? {
+        let response = match serde_json::from_str::<ConfigRequest>(&line) {
+            Ok(request) if request.api_version == 1 => match request.operation.as_str() {
+                "get_config" => ConfigResponse {
+                    ok: true,
+                    api_version: 1,
+                    result: Some(serde_json::to_value(store.snapshot())?),
+                    error_code: None,
+                },
+                "put_config" => match request.config {
+                    Some(config) => match store.replace(config) {
+                        Ok(()) => ConfigResponse {
+                            ok: true,
+                            api_version: 1,
+                            result: Some(serde_json::json!({"saved": true})),
+                            error_code: None,
+                        },
+                        Err(error) => ConfigResponse {
+                            ok: false,
+                            api_version: 1,
+                            result: None,
+                            error_code: Some(error.to_string()),
+                        },
+                    },
+                    None => ConfigResponse {
+                        ok: false,
+                        api_version: 1,
+                        result: None,
+                        error_code: Some("missing_config".into()),
+                    },
+                },
+                _ => ConfigResponse {
+                    ok: false,
+                    api_version: 1,
+                    result: None,
+                    error_code: Some("invalid_request".into()),
+                },
+            },
+            _ => ConfigResponse {
+                ok: false,
+                api_version: 1,
+                result: None,
+                error_code: Some("invalid_request".into()),
+            },
+        };
+        println!("{}", serde_json::to_string(&response)?);
+    }
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -24,6 +112,13 @@ async fn main() -> anyhow::Result<()> {
                 println!("{response}");
             }
         }
+        return Ok(());
+    }
+    if args.get(1).map(String::as_str) == Some("config") {
+        let path = args
+            .get(2)
+            .ok_or_else(|| anyhow::anyhow!("configuration path is required"))?;
+        run_config(PathBuf::from(path)).await?;
         return Ok(());
     }
 

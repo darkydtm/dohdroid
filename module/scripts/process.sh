@@ -11,3 +11,7 @@ daemon_pids() {
 		printf '%s\n' "${process##*/}"
 	done
 }
+
+daemon_running() {
+	[ -n "$(daemon_pids)" ] && [ -S "$MODDIR/run/dohd.sock" ]
+}

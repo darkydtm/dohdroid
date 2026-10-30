@@ -11,6 +11,8 @@
 		timeoutError: document.querySelector('#timeoutError'),
 		queries: document.querySelector('#queries'),
 		errors: document.querySelector('#errors'),
+		daemonStatus: document.querySelector('#daemonStatus'),
+		daemonStatusText: document.querySelector('#daemonStatusText'),
 	};
 
 	function showHistory(config) {
@@ -51,18 +53,34 @@
 		return urlValid && timeoutValid;
 	}
 
+	function showDaemonStatus(status) {
+		const running = Boolean(status.running);
+		elements.daemonStatus.className = `status-badge ${running ? 'running' : 'stopped'}`;
+		elements.daemonStatus.textContent = running ? 'Running' : 'Stopped';
+		elements.daemonStatusText.textContent = status.enabled
+			? (running ? 'Daemon is enabled and accepting requests.' : 'Daemon is enabled but not running.')
+			: 'Daemon is disabled. Settings are saved locally.';
+	}
+
 	async function load(addLog, showError) {
 		try {
-			const [config, status, tun, killswitch] = await Promise.all([
-			window.dohdApi.request('get_config'),
-			window.dohdApi.request('status'),
-			window.dohdApi.stateRequest('tun-status'),
-			window.dohdApi.stateRequest('killswitch-status'),
+			const [daemon, config, tun, killswitch] = await Promise.all([
+				window.dohdApi.stateRequest('daemon-status'),
+				window.dohdApi.request('get_config'),
+				window.dohdApi.stateRequest('tun-status'),
+				window.dohdApi.stateRequest('killswitch-status'),
 			]);
+			showDaemonStatus(daemon);
 			elements.tunMode.value = tun ? 'on' : 'off';
 			elements.killswitchMode.value = killswitch ? 'on' : 'off';
-			elements.queries.textContent = status.requests;
-			elements.errors.textContent = status.errors;
+			if (daemon.running) {
+				const status = await window.dohdApi.request('status');
+				elements.queries.textContent = status.requests;
+				elements.errors.textContent = status.errors;
+			} else {
+				elements.queries.textContent = '-';
+				elements.errors.textContent = '-';
+			}
 			const resolver = config.resolvers.find((item) => item.enabled) || config.resolvers[0];
 			if (resolver) elements.url.value = resolver.url;
 			showHistory(config);
@@ -91,8 +109,13 @@
 			if (tun !== await window.dohdApi.stateRequest('tun-status')) await window.dohdApi.stateRequest(tun ? 'tun-enable' : 'tun-disable');
 			const killswitch = elements.killswitchMode.value === 'on';
 			if (killswitch !== await window.dohdApi.stateRequest('killswitch-status')) await window.dohdApi.stateRequest(killswitch ? 'killswitch-enable' : 'killswitch-disable');
-			await window.dohdApi.restartDaemon();
-			addLog('configuration saved and daemon restarted');
+			const daemon = await window.dohdApi.stateRequest('daemon-status');
+			if (daemon.enabled) {
+				await window.dohdApi.restartDaemon();
+				addLog('configuration saved and daemon restarted');
+			} else {
+				addLog('configuration saved while daemon is stopped');
+			}
 		} catch (error) {
 			showError(error.message);
 		}
