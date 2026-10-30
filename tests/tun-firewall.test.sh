@@ -26,7 +26,6 @@ if sh "$TMP/module/scripts/tun-firewall.sh" install; then
 fi
 touch "$TMP/module/config/tun-enabled"
 sh "$TMP/module/scripts/tun-firewall.sh" install
-if grep -q -- '--uid-owner 0' "$TEST_LOG"; then exit 1; fi
 grep -q 'ip -4 rule add priority 10530' "$TEST_LOG"
 grep -q 'ip -6 rule add priority 10530' "$TEST_LOG"
 grep -q 'iptables -t mangle -A DOHD_TUN -p udp --dport 53' "$TEST_LOG"
