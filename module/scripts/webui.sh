@@ -24,7 +24,6 @@ case "${1:-}" in
 		;;
 	killswitch-enable|killswitch-disable)
 		if [ "$1" = killswitch-enable ]; then killswitch_enable; else killswitch_disable; fi
-		if daemon_enabled; then sh "$MODDIR/service.sh"; fi
 		printf '%s\n' '{"ok":true,"result":true}'
 		exit 0
 		;;
@@ -34,7 +33,6 @@ case "${1:-}" in
 		;;
 	tun-enable|tun-disable)
 		if [ "$1" = tun-enable ]; then tun_enable; else tun_disable; fi
-		if [ -f "$MODDIR/run/dohd.pid" ]; then kill "$(cat "$MODDIR/run/dohd.pid")" 2>/dev/null || true; fi
 		printf '%s\n' '{"ok":true,"result":true}'
 		exit 0
 		;;

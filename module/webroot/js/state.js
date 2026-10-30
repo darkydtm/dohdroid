@@ -99,6 +99,9 @@
 			validate();
 			addLog('configuration loaded from daemon');
 		} catch (error) {
+			elements.daemonStatus.className = 'status-badge stopped';
+			elements.daemonStatus.textContent = 'Unknown';
+			elements.daemonStatusText.textContent = 'Unable to check daemon state.';
 			showError(error.message);
 		}
 	}
@@ -130,13 +133,7 @@
 			if (tun !== await window.dohdApi.stateRequest('tun-status')) await window.dohdApi.stateRequest(tun ? 'tun-enable' : 'tun-disable');
 			const killswitch = elements.killswitchMode.value === 'on';
 			if (killswitch !== await window.dohdApi.stateRequest('killswitch-status')) await window.dohdApi.stateRequest(killswitch ? 'killswitch-enable' : 'killswitch-disable');
-			const daemon = await window.dohdApi.stateRequest('daemon-status');
-			if (daemon.enabled) {
-				await window.dohdApi.restartDaemon();
-				addLog('configuration saved and daemon restarted');
-			} else {
-				addLog('configuration saved while daemon is stopped');
-			}
+			addLog('configuration saved; some changes require a daemon restart');
 		} catch (error) {
 			showError(error.message);
 		}

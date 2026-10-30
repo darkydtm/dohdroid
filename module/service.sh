@@ -28,7 +28,8 @@ flock -x 9
 if [ "${1:-}" = boot ] && daemon_running; then exit 0; fi
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 if daemon_enabled && resolver_enabled; then
-	update_description ERROR
+	update_description LOADING
+	trap 'update_description ERROR' EXIT
 else
 	update_description OFF
 fi
@@ -135,3 +136,4 @@ elif ! "$FIREWALL" install; then
 fi
 if ! tun_enabled && killswitch_enabled; then "$KILLSWITCH" install || exit 1; fi
 update_description ON
+trap - EXIT

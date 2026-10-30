@@ -39,6 +39,7 @@ jobs:
       - run: bash -n module/service.sh module/boot-completed.sh module/uninstall.sh module/action.sh module/customize.sh package.sh module/scripts/*.sh scripts/*.sh
       - run: node tests/webui-permission.test.js
       - run: node tests/webui-theme.test.js
+      - run: node tests/webui-restart.test.js
       - run: node tests/build-info.test.js
       - run: sh tests/install-permissions.test.sh
       - run: sh tests/private-dns.test.sh

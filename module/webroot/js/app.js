@@ -46,12 +46,23 @@
 
 	document.querySelector('#saveButton').addEventListener('click', () => save(addLog, showError));
 	document.querySelector('#restartButton').addEventListener('click', async () => {
+		const buttons = [...document.querySelectorAll('button')];
+		const disabled = buttons.map((button) => button.disabled);
+		buttons.forEach((button) => { button.disabled = true; });
+		elements.daemonStatus.className = 'status-badge loading';
+		elements.daemonStatus.textContent = 'Loading';
+		elements.daemonStatusText.textContent = 'Restarting daemon...';
 		try {
 			await restartDaemon();
 			addLog('daemon restarted');
-			await load(addLog, showError);
 		} catch (error) {
 			showError(error.message);
+		} finally {
+			try {
+				await load(addLog, showError);
+			} finally {
+				buttons.forEach((button, index) => { button.disabled = disabled[index]; });
+			}
 		}
 	});
 	document.querySelector('#testButton').addEventListener('click', async () => {
