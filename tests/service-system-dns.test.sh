@@ -36,6 +36,7 @@ SCRIPT
 cat > "$MODDIR/scripts/description.sh" <<'SCRIPT'
 update_description() { :; }
 SCRIPT
+cp "$ROOT/module/scripts/resolver.sh" "$MODDIR/scripts/resolver.sh"
 chmod +x "$MODDIR/scripts/"*.sh
 cp "$ROOT/module/config/config.toml.example" "$MODDIR/config/config.toml"
 touch "$MODDIR/config/daemon-enabled"
