@@ -1,13 +1,14 @@
 #!/system/bin/sh
 set -eu
 MODDIR=${0%/*/*}
+. "$MODDIR/scripts/state.sh"
 case "${1:-}" in
 	tun-status)
-		if [ -f "$MODDIR/config/tun-enabled" ]; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
+		if tun_enabled; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
 		exit 0
 		;;
 	tun-enable|tun-disable)
-		if [ "$1" = tun-enable ]; then touch "$MODDIR/config/tun-enabled"; else rm -f "$MODDIR/config/tun-enabled"; fi
+		if [ "$1" = tun-enable ]; then tun_enable; else tun_disable; fi
 		if [ -f "$MODDIR/run/dohd.pid" ]; then kill "$(cat "$MODDIR/run/dohd.pid")" 2>/dev/null || true; fi
 		printf '%s\n' '{"ok":true,"result":true}'
 		exit 0

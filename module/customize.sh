@@ -9,12 +9,14 @@ for binary in "$MODPATH"/system/bin/*/sing-box; do
 	[ -f "$binary" ] || continue
 	set_perm "$binary" 0 0 0755
 done
+mkdir -p "$MODPATH/config"
 old_config=/data/adb/modules/doh-dns/config/config.toml
 if [ -f "$old_config" ] && [ "$MODPATH/config/config.toml" != "$old_config" ]; then
-	mkdir -p "$MODPATH/config"
 	cp "$old_config" "$MODPATH/config/config.toml"
 	set_perm "$MODPATH/config/config.toml" 0 0 0600
 fi
+[ -f /data/adb/modules/doh-dns/config/daemon-enabled ] && [ "$MODPATH" != /data/adb/modules/doh-dns ] && touch "$MODPATH/config/daemon-enabled"
+[ -f "$MODPATH/config/daemon-enabled" ] || touch "$MODPATH/config/daemon-enabled"
 if [ -f /data/adb/modules/doh-dns/config/tun-enabled ] && [ "$MODPATH" != /data/adb/modules/doh-dns ]; then
 	touch "$MODPATH/config/tun-enabled"
 fi

@@ -15,6 +15,8 @@ try {
 	fs.mkdirSync(scripts, { recursive: true });
 	fs.mkdirSync(bin, { recursive: true });
 	fs.copyFileSync(path.join(root, 'module/scripts/webui.sh'), path.join(scripts, 'webui.sh'));
+	fs.copyFileSync(path.join(root, 'module/scripts/state.sh'), path.join(scripts, 'state.sh'));
+	fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
 	fs.chmodSync(path.join(scripts, 'webui.sh'), 0o644);
 	fs.writeFileSync(path.join(bin, 'dohd'), '#!/bin/sh\ncat >/dev/null\nprintf \'{"ok":true,"result":"ok"}\\n\'\n', { mode: 0o755 });
 	const html = fs.readFileSync(path.join(root, 'module/webroot/index.html'), 'utf8');
@@ -22,6 +24,7 @@ try {
 	assert.match(html, /src="js\/api\.js"/);
 	assert.match(html, /src="js\/state\.js"/);
 	assert.match(html, /src="js\/app\.js"/);
+	assert.match(html, /id="resolverHistoryList"/);
 	assert.equal(fs.existsSync(path.join(root, 'webui-prototype.html')), false);
 	const request = fs.readFileSync(path.join(root, 'module/webroot/js/api.js'), 'utf8');
 	const context = { window: {}, Promise, JSON, Error };

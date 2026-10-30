@@ -5,6 +5,7 @@
 		fallback: document.querySelector('#fallback'),
 		tunMode: document.querySelector('#tunMode'),
 		history: document.querySelector('#resolverHistory'),
+		historyList: document.querySelector('#resolverHistoryList'),
 		resolverError: document.querySelector('#resolverError'),
 		timeoutError: document.querySelector('#timeoutError'),
 		queries: document.querySelector('#queries'),
@@ -12,10 +13,22 @@
 	};
 
 	function showHistory(config) {
-		elements.history.replaceChildren(...(config.resolver_history || []).map((value) => {
+		const history = config.resolver_history || [];
+		elements.history.replaceChildren(...history.map((value) => {
 			const option = document.createElement('option');
 			option.value = value;
 			return option;
+		}));
+		elements.historyList.replaceChildren(...history.map((value) => {
+			const button = document.createElement('button');
+			button.type = 'button';
+			button.className = 'history-item';
+			button.textContent = value;
+			button.addEventListener('click', () => {
+				elements.url.value = value;
+				validate();
+			});
+			return button;
 		}));
 	}
 

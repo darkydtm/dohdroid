@@ -1,13 +1,9 @@
 #!/system/bin/sh
 set -eu
 MODDIR=${0%/*}
-FIREWALL="$MODDIR/scripts/firewall.sh"
-if [ -f "$MODDIR/config/tun-enabled" ]; then
-	FIREWALL="$MODDIR/scripts/tun-firewall.sh"
-fi
-SOCKET="$MODDIR/run/dohd.sock"
 MODULE_PROP="$MODDIR/module.prop"
 CONFIG="$MODDIR/config/config.toml"
+. "$MODDIR/scripts/state.sh"
 
 read_resolver_url() {
 	awk -F'"' '/^[[:space:]]*url[[:space:]]*=/ { print $2; exit }' "$CONFIG" 2>/dev/null || true
@@ -29,14 +25,16 @@ update_description() {
 	mv "$tmp" "$MODULE_PROP"
 }
 
-if "$FIREWALL" status >/dev/null 2>&1; then
-	"$FIREWALL" remove
+if daemon_enabled; then
+	daemon_disable
+	sh "$MODDIR/service.sh"
 	. "$MODDIR/scripts/private-dns.sh"
-	private_dns_restore
 	update_description "OFF"
 	echo "DoH DNS disabled"
 else
+	daemon_enable
 	if ! sh "$MODDIR/service.sh"; then
+		daemon_disable
 		update_description "ERROR"
 		echo "DoH DNS daemon failed to start" >&2
 		exit 1

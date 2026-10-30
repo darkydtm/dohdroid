@@ -7,6 +7,7 @@ FIREWALL="$MODDIR/scripts/firewall.sh"
 TUN_FIREWALL="$MODDIR/scripts/tun-firewall.sh"
 . "$MODDIR/scripts/private-dns.sh"
 . "$MODDIR/scripts/process.sh"
+. "$MODDIR/scripts/state.sh"
 mkdir -p "$MODDIR/run" "$MODDIR/config"
 [ -f "$MODDIR/config/config.toml" ] || cp "$MODDIR/config/config.toml.example" "$MODDIR/config/config.toml"
 case "$(uname -m)" in
@@ -18,7 +19,7 @@ case "$(uname -m)" in
 esac
 BINARY="$MODDIR/system/bin/$ABI/dohd"
 [ -x "$BINARY" ] || { echo "Missing daemon for ABI: $ABI" >&2; exit 1; }
-if [ -f "$MODDIR/config/tun-enabled" ]; then FIREWALL="$TUN_FIREWALL"; fi
+if tun_enabled; then FIREWALL="$TUN_FIREWALL"; fi
 "$FIREWALL" remove
 for pid in $(daemon_pids); do
 	state=
@@ -40,6 +41,15 @@ if [ -f "$MODDIR/run/tun.pid" ]; then
 	rm -f "$MODDIR/run/tun.pid"
 fi
 rm -f "$SOCKET" "$PIDFILE"
+if ! daemon_enabled; then
+	"$TUN_FIREWALL" remove || true
+	if [ -f "$MODDIR/run/tun.pid" ]; then
+		kill "$(cat "$MODDIR/run/tun.pid")" 2>/dev/null || true
+		rm -f "$MODDIR/run/tun.pid"
+	fi
+	private_dns_restore || true
+	exit 0
+fi
 private_dns_restore || exit 1
 DOHD_CONFIG="$MODDIR/config/config.toml" DOHD_SOCKET="$SOCKET" DOHD_WEB_ROOT="$MODDIR/webroot" "$BINARY" >"$MODDIR/run/dohd.log" 2>&1 &
 pid=$!
@@ -61,7 +71,7 @@ if ! private_dns_disable; then
 	kill "$pid" 2>/dev/null || true
 	exit 1
 fi
-if [ -f "$MODDIR/config/tun-enabled" ]; then
+if tun_enabled; then
 	port=$(awk -F= '/^[[:space:]]*listen_port[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$MODDIR/config/config.toml")
 	case "$port" in ''|*[!0-9]*) port=5353 ;; esac
 	sed "s/\"server_port\": 5353/\"server_port\": $port/" "$MODDIR/config/tun.json" > "$MODDIR/run/tun.json"

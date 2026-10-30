@@ -1,6 +1,7 @@
 #!/system/bin/sh
 set -eu
 MODDIR=${0%/*/*}
+. "$MODDIR/scripts/state.sh"
 TABLE=19053
 PRIORITY=10530
 MARK=0x1000000/0x1000000
@@ -38,6 +39,7 @@ install_family() {
 
 case "${1:-status}" in
 	install)
+		tun_enabled || exit 1
 		remove_family -4 "$IPTABLES"
 		remove_family -6 "$IP6TABLES"
 		if ! (install_family -4 "$IPTABLES" && install_family -6 "$IP6TABLES"); then
@@ -51,6 +53,7 @@ case "${1:-status}" in
 		remove_family -6 "$IP6TABLES"
 		;;
 	status)
+		tun_enabled || exit 1
 		"$IPTABLES" -t mangle -C OUTPUT -j "$CHAIN" >/dev/null 2>&1 &&
 		"$IP6TABLES" -t mangle -C OUTPUT -j "$CHAIN" >/dev/null 2>&1
 		;;

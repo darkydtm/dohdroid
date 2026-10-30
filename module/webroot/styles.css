@@ -44,6 +44,9 @@ input, select { width: 100%; border: 1px solid var(--md-sys-color-outline); bord
 input:focus, select:focus { border-color: var(--md-sys-color-primary); box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
 input.invalid, select.invalid { border-color: var(--md-sys-color-error); box-shadow: 0 0 0 2px var(--md-sys-color-error-container); }
 .error { min-height: 1em; color: var(--md-sys-color-error); font-size: .75rem; }
+.history-list { display: grid; gap: 6px; }
+.history-item { min-height: 34px; overflow: hidden; padding: 0 12px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-small); background: transparent; color: var(--md-sys-color-on-surface-variant); font-size: .8rem; font-weight: 400; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.history-item:hover { border-color: var(--md-sys-color-primary); color: var(--md-sys-color-primary); }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
 button { min-height: 40px; border: 0; border-radius: var(--md-sys-shape-full); padding: 0 20px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 600; }
 button.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }

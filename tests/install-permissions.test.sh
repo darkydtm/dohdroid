@@ -13,6 +13,7 @@ set_perm() {
 	chmod "$4" "$1"
 }
 . "$ROOT/module/customize.sh"
-for file in "$MODPATH"/scripts/*.sh "$MODPATH/system/bin/arm64-v8a/dohd"; do
+for file in "$MODPATH"/scripts/*.sh "$MODPATH"/system/bin/arm64-v8a/dohd; do
 	[ -x "$file" ] || { printf 'not executable: %s\n' "$file" >&2; exit 1; }
 done
+[ -f "$MODPATH/config/daemon-enabled" ]

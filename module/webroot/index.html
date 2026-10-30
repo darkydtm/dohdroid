@@ -13,7 +13,7 @@
 				<section class="card">
 					<div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div>
 					<div class="card-body">
-						<div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" list="resolverHistory" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><datalist id="resolverHistory"></datalist><span class="error" id="resolverError" role="alert"></span></div>
+						<div class="field"><label for="resolverUrl">Primary resolver URL</label><input id="resolverUrl" list="resolverHistory" value="https://cloudflare-dns.com/dns-query" aria-describedby="resolverError"><datalist id="resolverHistory"></datalist><span class="error" id="resolverError" role="alert"></span><div class="history-list" id="resolverHistoryList" aria-label="Saved servers"></div></div>
 						<div class="field"><label for="tunMode">DNS interception mode</label><select id="tunMode"><option value="off">Standard</option><option value="on">TUN - compatible with VPN</option></select></div>
 						<div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button><button class="tonal" id="restartButton">Restart daemon</button></div>
 					</div>
