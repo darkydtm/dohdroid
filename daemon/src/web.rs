@@ -32,7 +32,7 @@ pub fn router(state: WebState) -> Router {
         .route("/api/status", get(status))
         .route("/api/config", get(get_config).put(put_config))
         .route("/api/cache/clear", post(clear_cache))
-        .route("/{*path}", get(asset))
+        .route("/*path", get(asset))
         .with_state(state)
 }
 

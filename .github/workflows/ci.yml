@@ -41,6 +41,7 @@ jobs:
       - run: node tests/build-info.test.js
       - run: sh tests/install-permissions.test.sh
       - run: sh tests/private-dns.test.sh
+      - run: sh tests/firewall.test.sh
       - run: sh tests/process.test.sh
       - run: sh tests/state.test.sh
       - run: sh tests/tun-firewall.test.sh

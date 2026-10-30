@@ -3,16 +3,19 @@ set -eu
 MODDIR=${0%/*}
 CHAIN=DOHD_DNS
 PORT=${DOHD_PORT:-5353}
-backend=""
-for candidate in /system/bin/iptables /system/bin/iptables-legacy /system/bin/nft; do
-	if [ -x "$candidate" ]; then backend="$candidate"; break; fi
-done
+backend=${DOHD_IPTABLES:-}
+if [ -z "$backend" ]; then
+	for candidate in /system/bin/iptables /system/bin/iptables-legacy /system/bin/nft; do
+		if [ -x "$candidate" ]; then backend="$candidate"; break; fi
+	done
+fi
 [ -n "$backend" ] || exit 1
 iptables_mode() {
 	case "${1:-status}" in
 		install)
 			"$backend" -t nat -N "$CHAIN" 2>/dev/null || true
 			"$backend" -t nat -F "$CHAIN"
+			"$backend" -t nat -A "$CHAIN" -m owner --uid-owner 0 -j RETURN
 			"$backend" -t nat -A "$CHAIN" -p udp --dport 53 -j REDIRECT --to-ports "$PORT"
 			"$backend" -t nat -A "$CHAIN" -p tcp --dport 53 -j REDIRECT --to-ports "$PORT"
 			"$backend" -t nat -C OUTPUT -j "$CHAIN" 2>/dev/null || "$backend" -t nat -A OUTPUT -j "$CHAIN"
