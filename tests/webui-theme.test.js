@@ -69,3 +69,8 @@ assert.ok(html.indexOf('id="themeMode"') > html.indexOf('id="timeout"'));
 const css = fs.readFileSync(path.join(root, 'module/webroot/styles.css'), 'utf8');
 assert.match(css, /:root\[data-theme="black"\][\s\S]*?--md-sys-color-surface: #000000/);
 assert.match(css, /--md-sys-color-surface-container: #0a1119/);
+assert.match(css, /@import url\("https:\/\/mui\.kernelsu\.org\/internal\/colors\.css"\)/);
+assert.match(css, /--md-sys-color-primary: var\(--primary,/);
+assert.match(css, /--md-sys-color-on-surface: var\(--onSurface,/);
+assert.match(css, /--md-sys-color-surface: var\(--background,/);
+assert.match(css, /--md-sys-color-surface-container: var\(--surfaceContainer,/);
