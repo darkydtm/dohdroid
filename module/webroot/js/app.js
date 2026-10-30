@@ -10,6 +10,7 @@
 	const { elements, load, save, validate } = window.dohdState;
 	const { request, restartDaemon } = window.dohdApi;
 	const themeMode = document.querySelector('#themeMode');
+	const materialColors = document.querySelector('#materialColors');
 	const themes = new Set(['white', 'dark', 'black']);
 
 	function applyTheme(theme, persist = true) {
@@ -19,20 +20,27 @@
 		if (persist) {
 			try {
 				localStorage.setItem('dohd-theme', selected);
-			} catch {
-				return;
-			}
+			} catch {}
 		}
 	}
 
 	let savedTheme = 'dark';
+	let useMaterialColors = true;
 	try {
 		savedTheme = localStorage.getItem('dohd-theme') || savedTheme;
-	} catch {
-		// Keep the default palette when storage is unavailable.
-	}
+		useMaterialColors = localStorage.getItem('dohd-material-colors') !== 'false';
+	} catch {}
 	applyTheme(savedTheme, false);
+	materialColors.checked = useMaterialColors;
+	document.documentElement.dataset.materialColors = String(useMaterialColors);
 	themeMode.addEventListener('change', () => applyTheme(themeMode.value));
+	materialColors.addEventListener('change', () => {
+		const enabled = materialColors.checked;
+		document.documentElement.dataset.materialColors = String(enabled);
+		try {
+			localStorage.setItem('dohd-material-colors', String(enabled));
+		} catch {}
+	});
 
 	if (window.buildInfo) document.querySelector('#buildInfo').textContent = `Build: ${window.buildInfo.branch} @ ${window.buildInfo.commit}`;
 

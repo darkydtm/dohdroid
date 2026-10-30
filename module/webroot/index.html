@@ -9,10 +9,6 @@
 <body>
 	<div class="app">
 		<main class="main">
-			<header class="topbar">
-				<div class="brand-lockup"><span class="brand-mark" aria-hidden="true">D</span><div><p class="eyebrow">KernelSU module</p><h1>DoH DNS</h1></div></div>
-				<div class="theme-control"><label for="themeMode">Color palette</label><select id="themeMode"><option value="white">White</option><option value="dark" selected>Dark</option><option value="black">Black</option></select></div>
-			</header>
 			<section class="content">
 				<section class="card daemon-card">
 					<div class="card-header"><div><p class="eyebrow">Service state</p><h2 class="card-title">Daemon</h2></div><span class="status-badge" id="daemonStatus">Checking...</span></div>
@@ -31,6 +27,13 @@
 					<div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div>
 					<div class="metrics"><div class="metric"><div class="metric-value" id="queries">-</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value" id="errors">-</div><div class="metric-label">Errors</div></div></div>
 					<div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div>
+				</section>
+				<section class="card palette-card" aria-labelledby="paletteTitle">
+					<div class="card-header"><div><p class="eyebrow">Appearance</p><h2 class="card-title" id="paletteTitle">Colors and palette</h2></div><span class="card-support">Material 3</span></div>
+					<div class="card-body palette-body">
+						<div class="field palette-select"><label for="themeMode">Palette</label><select id="themeMode"><option value="white">White</option><option value="dark" selected>Dark</option><option value="black">AMOLED black</option></select></div>
+						<label class="material-colors-toggle" for="materialColors"><span class="toggle-copy"><strong>Material colors</strong><small>Use color accents across surfaces and controls</small></span><input id="materialColors" type="checkbox" checked><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span></label>
+					</div>
 				</section>
 			</section>
 			<div class="log" id="log"></div>

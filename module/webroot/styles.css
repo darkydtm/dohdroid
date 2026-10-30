@@ -67,29 +67,29 @@
 
 :root[data-theme="black"] {
 	color-scheme: dark;
-	--md-sys-color-primary: #d5e2ff;
-	--md-sys-color-on-primary: #082f61;
-	--md-sys-color-primary-container: #17477e;
-	--md-sys-color-on-primary-container: #d5e2ff;
-	--md-sys-color-secondary: #c5c6c8;
-	--md-sys-color-on-secondary: #303133;
-	--md-sys-color-secondary-container: #1f2022;
-	--md-sys-color-on-secondary-container: #e5e2e4;
-	--md-sys-color-tertiary: #e8c2d3;
-	--md-sys-color-on-tertiary: #482536;
+	--md-sys-color-primary: #9fcaff;
+	--md-sys-color-on-primary: #003257;
+	--md-sys-color-primary-container: #064a7c;
+	--md-sys-color-on-primary-container: #d1e4ff;
+	--md-sys-color-secondary: #b7c9e2;
+	--md-sys-color-on-secondary: #223448;
+	--md-sys-color-secondary-container: #14283b;
+	--md-sys-color-on-secondary-container: #d3e5ff;
+	--md-sys-color-tertiary: #c4c5ff;
+	--md-sys-color-on-tertiary: #292b60;
 	--md-sys-color-error: #ffb4ab;
 	--md-sys-color-on-error: #690005;
 	--md-sys-color-error-container: #410002;
 	--md-sys-color-on-error-container: #ffdad6;
 	--md-sys-color-surface: #000000;
-	--md-sys-color-surface-container-low: #080808;
-	--md-sys-color-surface-container: #101010;
-	--md-sys-color-surface-container-high: #181818;
-	--md-sys-color-surface-container-highest: #222222;
-	--md-sys-color-on-surface: #f0f0f0;
-	--md-sys-color-on-surface-variant: #c5c5c5;
-	--md-sys-color-outline: #909090;
-	--md-sys-color-outline-variant: #444444;
+	--md-sys-color-surface-container-low: #050a10;
+	--md-sys-color-surface-container: #0a1119;
+	--md-sys-color-surface-container-high: #101c28;
+	--md-sys-color-surface-container-highest: #172636;
+	--md-sys-color-on-surface: #e3ecf7;
+	--md-sys-color-on-surface-variant: #b4c5d8;
+	--md-sys-color-outline: #849bb4;
+	--md-sys-color-outline-variant: #30465d;
 	--md-sys-color-shadow: #000000;
 }
 
@@ -102,13 +102,7 @@ button, input, select { transition: background var(--md-motion-standard), border
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--md-sys-color-primary); outline-offset: 2px; }
 .app { min-height: 100dvh; display: flex; }
 .main { width: min(1160px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 64px; }
-.topbar { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
-.brand-lockup { display: flex; align-items: center; gap: 14px; }
-.brand-mark { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 17px 17px 17px 5px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-size: 1.5rem; font-weight: 800; box-shadow: 0 8px 24px color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent); }
 .eyebrow { margin: 0 0 4px; color: var(--md-sys-color-primary); font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 800; letter-spacing: -.055em; line-height: 1; }
-.theme-control { display: grid; min-width: 154px; gap: 6px; }
-.theme-control label { color: var(--md-sys-color-on-surface-variant); font-size: var(--md-typescale-label); }
 .content { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .85fr); gap: 20px; }
 .card { overflow: hidden; border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 72%, transparent); border-radius: var(--md-sys-shape-large); background: var(--md-sys-color-surface-container); box-shadow: 0 12px 30px color-mix(in srgb, var(--md-sys-color-shadow) 12%, transparent); }
 .daemon-card { grid-column: 1 / -1; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-surface-container)); }
@@ -145,5 +139,21 @@ button:active { transform: scale(.98); }
 .log { min-height: 44px; margin-top: 20px; padding: 15px 20px; border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 72%, transparent); border-radius: var(--md-sys-shape-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface-variant); font-family: ui-monospace, monospace; font-size: .75rem; line-height: 1.8; }
 .log strong { color: var(--md-sys-color-primary); font-weight: 700; }
 .build-info { margin-top: 18px; color: var(--md-sys-color-outline); font: .7rem ui-monospace, monospace; overflow-wrap: anywhere; }
-@media (max-width: 760px) { .main { width: min(100% - 28px, 620px); padding-top: 20px; } .topbar { align-items: stretch; flex-direction: column; gap: 18px; } .theme-control { max-width: 220px; } .content { grid-template-columns: 1fr; } .card-header, .card-body { padding-left: 18px; padding-right: 18px; } }
+.palette-card { grid-column: 1 / -1; }
+.palette-body { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(260px, 1.3fr); align-items: end; gap: 24px; }
+.palette-select { margin-top: 0; }
+.material-colors-toggle { display: flex; min-height: 58px; align-items: center; justify-content: space-between; gap: 20px; cursor: pointer; }
+.toggle-copy { display: grid; gap: 4px; }
+.toggle-copy strong { color: var(--md-sys-color-on-surface); font-size: .95rem; font-weight: 650; }
+.toggle-copy small { color: var(--md-sys-color-on-surface-variant); font-size: .76rem; font-weight: 400; }
+.material-colors-toggle input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.switch-track { display: flex; width: 52px; height: 32px; flex: 0 0 auto; align-items: center; padding: 4px; border: 2px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-full); background: var(--md-sys-color-surface-container-highest); transition: background var(--md-motion-standard), border-color var(--md-motion-standard); }
+.switch-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--md-sys-color-outline); transition: width var(--md-motion-standard), height var(--md-motion-standard), transform var(--md-motion-standard), background var(--md-motion-standard); }
+.material-colors-toggle input:checked + .switch-track { border-color: var(--md-sys-color-primary); background: var(--md-sys-color-primary); }
+.material-colors-toggle input:checked + .switch-track .switch-thumb { width: 24px; height: 24px; transform: translateX(16px); background: var(--md-sys-color-on-primary); }
+.material-colors-toggle input:focus-visible + .switch-track { outline: 3px solid var(--md-sys-color-primary); outline-offset: 3px; }
+:root[data-material-colors="false"] { --md-sys-color-primary: #c4c9d4; --md-sys-color-on-primary: #282b31; --md-sys-color-primary-container: #383c44; --md-sys-color-on-primary-container: #e1e4ec; --md-sys-color-secondary: #c4c9d4; --md-sys-color-on-secondary: #282b31; --md-sys-color-secondary-container: #383c44; --md-sys-color-on-secondary-container: #e1e4ec; --md-sys-color-tertiary: #c4c9d4; --md-sys-color-on-tertiary: #282b31; }
+:root[data-theme="white"][data-material-colors="false"] { --md-sys-color-primary: #50545c; --md-sys-color-on-primary: #ffffff; --md-sys-color-primary-container: #e0e2e7; --md-sys-color-on-primary-container: #191b20; --md-sys-color-secondary: #555961; --md-sys-color-on-secondary: #ffffff; --md-sys-color-secondary-container: #e5e6eb; --md-sys-color-on-secondary-container: #191b20; --md-sys-color-tertiary: #555961; --md-sys-color-on-tertiary: #ffffff; }
+:root[data-theme="black"][data-material-colors="false"] { --md-sys-color-primary: #d0d3da; --md-sys-color-on-primary: #25282e; --md-sys-color-primary-container: #383c44; --md-sys-color-on-primary-container: #e2e5ec; --md-sys-color-secondary: #c5c9d0; --md-sys-color-on-secondary: #25282e; --md-sys-color-secondary-container: #24282e; --md-sys-color-on-secondary-container: #e2e5ec; --md-sys-color-tertiary: #d0d3da; --md-sys-color-on-tertiary: #25282e; }
+@media (max-width: 760px) { .main { width: min(100% - 28px, 620px); padding-top: 20px; } .content { grid-template-columns: 1fr; } .card-header, .card-body { padding-left: 18px; padding-right: 18px; } .palette-body { grid-template-columns: 1fr; gap: 18px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; } }
