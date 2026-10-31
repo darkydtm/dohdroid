@@ -2,7 +2,7 @@ use dohd::{config::ResolverConfig, doh::DohClient};
 
 #[test]
 fn client_creation_succeeds_without_resolver_configuration() {
-    DohClient::new().expect("client creation must not require resolver configuration");
+    DohClient::new(&[] as &[ResolverConfig]).expect("client creation must not require resolver configuration");
 }
 
 #[tokio::test]
