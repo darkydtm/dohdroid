@@ -4,7 +4,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/module/scripts" "$TMP/module/config" "$TMP/bin"
-cp "$ROOT/module/scripts/killswitch.sh" "$TMP/module/scripts/killswitch.sh"
+cp "$ROOT/module/scripts/killswitch.sh" "$ROOT/module/scripts/iptables-backend.sh" "$TMP/module/scripts/"
 cat > "$TMP/bin/iptables" <<'SCRIPT'
 #!/bin/sh
 printf '%s\n' "$*" >> "$TEST_LOG"
