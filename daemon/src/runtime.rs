@@ -3,7 +3,7 @@ use std::time::Instant;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct RuntimeStatus {
-    pub started_at: u64,
+    pub uptime_seconds: u64,
     pub requests: u64,
     pub errors: u64,
     pub enabled: bool,
@@ -33,7 +33,7 @@ impl Runtime {
     }
     pub fn status(&self) -> RuntimeStatus {
         RuntimeStatus {
-            started_at: self.started.elapsed().as_secs(),
+            uptime_seconds: self.started.elapsed().as_secs(),
             requests: self.requests,
             errors: self.errors,
             enabled: self.enabled,

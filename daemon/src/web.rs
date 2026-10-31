@@ -18,6 +18,12 @@ use std::{
 };
 use tokio::net::TcpListener;
 
+const ASSET_CONTENT_TYPES: &[(&str, &str)] = &[
+    ("css", "text/css; charset=utf-8"),
+    ("js", "application/javascript; charset=utf-8"),
+    ("html", "text/html; charset=utf-8"),
+];
+
 #[derive(Clone)]
 pub struct WebState {
     pub config: ConfigStore,
@@ -48,6 +54,13 @@ async fn asset(
 }
 
 async fn asset_file(root: &Path, relative_path: &str) -> Result<Response, StatusCode> {
+    let path = safe_asset_path(root, relative_path)?;
+    let content = read_asset(&path).await?;
+    let content_type = asset_content_type(Path::new(relative_path));
+    Ok(([(header::CONTENT_TYPE, content_type)], content).into_response())
+}
+
+fn safe_asset_path(root: &Path, relative_path: &str) -> Result<PathBuf, StatusCode> {
     let relative_path = Path::new(relative_path);
     if relative_path.components().any(|component| {
         matches!(
@@ -57,23 +70,30 @@ async fn asset_file(root: &Path, relative_path: &str) -> Result<Response, Status
     }) {
         return Err(StatusCode::NOT_FOUND);
     }
-    let path = root.join(relative_path);
+    Ok(root.join(relative_path))
+}
+
+async fn read_asset(path: &Path) -> Result<Vec<u8>, StatusCode> {
     let content = tokio::fs::read(path)
         .await
         .map_err(|error| match error.kind() {
             std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         })?;
-    let content_type = match relative_path
-        .extension()
+    Ok(content)
+}
+
+fn asset_content_type(path: &Path) -> &'static str {
+    path.extension()
         .and_then(|extension| extension.to_str())
-    {
-        Some("css") => "text/css; charset=utf-8",
-        Some("js") => "application/javascript; charset=utf-8",
-        Some("html") => "text/html; charset=utf-8",
-        _ => "application/octet-stream",
-    };
-    Ok(([(header::CONTENT_TYPE, content_type)], content).into_response())
+        .and_then(|extension| {
+            ASSET_CONTENT_TYPES
+                .iter()
+                .find_map(|(known_extension, content_type)| {
+                    (*known_extension == extension).then_some(*content_type)
+                })
+        })
+        .unwrap_or("application/octet-stream")
 }
 
 async fn status(State(state): State<WebState>) -> Json<Value> {
