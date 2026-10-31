@@ -45,7 +45,7 @@ cp "$ROOT/module/config/config.toml.example" "$MODDIR/config/config.toml"
 touch "$MODDIR/config/daemon-enabled"
 printf '#!/bin/sh\nexit 0\n' > "$MODDIR/system/bin/x86_64/dohd"
 chmod +x "$MODDIR/system/bin/x86_64/dohd"
-printf '#!/bin/sh\nprintf \"%%s\\n\" x86_64\n' > "$TMP/bin/uname"
+printf '#!/bin/sh\nprintf "%%s\\n" x86_64\n' > "$TMP/bin/uname"
 chmod +x "$TMP/bin/uname"
 export MODDIR TEST_LOG="$LOG" PATH="$TMP/bin:$PATH"
 scenario_daemon_not_running() {
