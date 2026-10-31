@@ -1,86 +1,82 @@
 (() => {
-	let callbackId = 0;
+  const SCRIPT_DIR = "/data/adb/modules/doh-dns/scripts";
+  const WEBUI_SCRIPT = `${SCRIPT_DIR}/webui.sh`;
+  const SERVICE_SCRIPT = "/data/adb/modules/doh-dns/service.sh";
+  const CALLBACK_TIMEOUT_MS = 30000;
+  let callbackId = 0;
 
-	function stateRequest(operation) {
-		return new Promise((resolve, reject) => {
-			if (!window.ksu) {
-				reject(new Error('KernelSU WebUI is required'));
-				return;
-			}
-			const callback = `dohdCallback${callbackId++}`;
-			window[callback] = (code, stdout, stderr) => {
-				delete window[callback];
-				if (code !== 0) {
-					reject(new Error(stderr || 'State operation failed'));
-					return;
-				}
-				try {
-					resolve(JSON.parse(stdout).result);
-				} catch (error) {
-					reject(error);
-				}
-			};
-			try {
-				ksu.exec(`sh /data/adb/modules/doh-dns/scripts/webui.sh ${operation}`, '{}', callback);
-			} catch (error) {
-				delete window[callback];
-				reject(error);
-			}
-		});
-	}
+  function shellQuote(value) {
+    return `'${String(value).replace(/'/g, "'\\''")}'`;
+  }
 
-	function request(operation, config) {
-		return new Promise((resolve, reject) => {
-			if (!window.ksu) {
-				reject(new Error('KernelSU WebUI is required'));
-				return;
-			}
-			const payload = JSON.stringify({ api_version: 1, operation, config });
-			const quoted = `'${payload.replace(/'/g, "'\\''")}'`;
-			const callback = `dohdCallback${callbackId++}`;
-			window[callback] = (code, stdout, stderr) => {
-				delete window[callback];
-				if (code !== 0) {
-					reject(new Error(stderr || 'Daemon is unavailable'));
-					return;
-				}
-				try {
-					const response = JSON.parse(stdout);
-					if (!response.ok) throw new Error(response.error_code || 'Request rejected');
-					resolve(response.result);
-				} catch (error) {
-					reject(error);
-				}
-			};
-			try {
-				ksu.exec(`sh /data/adb/modules/doh-dns/scripts/webui.sh ${quoted}`, '{}', callback);
-			} catch (error) {
-				delete window[callback];
-				reject(error);
-			}
-		});
-	}
+  function registerCallback(id, fn) {
+    window.__dohd_callbacks = window.__dohd_callbacks || {};
+    window.__dohd_callbacks[id] = fn;
+    window[id] = (...args) => window.__dohd_callbacks[id]?.(...args);
+  }
 
-	function restartDaemon() {
-		return new Promise((resolve, reject) => {
-			if (!window.ksu) {
-				reject(new Error('KernelSU WebUI is required'));
-				return;
-			}
-			const callback = `dohdCallback${callbackId++}`;
-			window[callback] = (code, stdout, stderr) => {
-				delete window[callback];
-				if (code !== 0) reject(new Error(stderr || 'Daemon restart failed'));
-				else resolve();
-			};
-			try {
-				ksu.exec('sh /data/adb/modules/doh-dns/service.sh', '{}', callback);
-			} catch (error) {
-				delete window[callback];
-				reject(error);
-			}
-		});
-	}
+  function unregisterCallback(id) {
+    if (window.__dohd_callbacks) delete window.__dohd_callbacks[id];
+    delete window[id];
+  }
 
-	window.dohdApi = { request, restartDaemon, stateRequest };
+  function ksuExec(command, args, handler) {
+    return new Promise((resolve, reject) => {
+      if (!window.ksu || typeof window.ksu.exec !== "function") {
+        reject(new Error("KernelSU WebUI is required"));
+        return;
+      }
+      const id = `dohdCallback${callbackId++}`;
+      const timeout = setTimeout(() => {
+        unregisterCallback(id);
+        reject(new Error("KernelSU command timed out"));
+      }, CALLBACK_TIMEOUT_MS);
+      registerCallback(id, (code, stdout, stderr) => {
+        clearTimeout(timeout);
+        unregisterCallback(id);
+        try {
+          if (code !== 0) throw new Error(stderr || "KernelSU command failed");
+          resolve(handler(code, stdout, stderr));
+        } catch (error) {
+          reject(error);
+        }
+      });
+      try {
+        window.ksu.exec(command, args, id);
+      } catch (error) {
+        clearTimeout(timeout);
+        unregisterCallback(id);
+        reject(error);
+      }
+    });
+  }
+
+  function stateRequest(operation) {
+    return ksuExec(
+      `sh ${WEBUI_SCRIPT} ${operation}`,
+      "{}",
+      (code, stdout) => JSON.parse(stdout).result,
+    );
+  }
+
+  function request(operation, config) {
+    const payload = JSON.stringify({ api_version: 1, operation, config });
+    return ksuExec(
+      `sh ${WEBUI_SCRIPT} ${shellQuote(payload)}`,
+      "{}",
+      (code, stdout) => {
+        const response = JSON.parse(stdout);
+        if (!response.ok)
+          throw new Error(response.error_code || "Request rejected");
+        return response.result;
+      },
+    );
+  }
+
+  function restartDaemon() {
+    return ksuExec(`sh ${SERVICE_SCRIPT}`, "{}", () => undefined);
+  }
+
+  window.dohdApi = { request, restartDaemon, stateRequest };
+  if (typeof module !== "undefined") module.exports = { shellQuote };
 })();
