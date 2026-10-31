@@ -89,10 +89,8 @@ impl Config {
                 "listen_address must be 127.0.0.1".into(),
             ));
         }
-        if self.connect_timeout_ms == 0
-            || self.connect_timeout_ms > 60_000
-            || self.request_timeout_ms == 0
-            || self.request_timeout_ms > 60_000
+        if !(1..=60_000).contains(&self.connect_timeout_ms)
+            || !(1..=60_000).contains(&self.request_timeout_ms)
         {
             return Err(ConfigError::Invalid(
                 "timeouts must be between 1 and 60000 ms".into(),
