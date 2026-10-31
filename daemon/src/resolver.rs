@@ -15,7 +15,7 @@ pub struct ResolverPool {
 impl ResolverPool {
     pub fn new(resolvers: Vec<ResolverConfig>) -> Result<Self> {
         Ok(Self {
-            client: DohClient::new(&resolvers)?,
+            client: DohClient::new()?,
             resolvers: resolvers
                 .into_iter()
                 .map(|r| (r, Mutex::new(None)))
@@ -30,16 +30,17 @@ impl ResolverPool {
         request_timeout: Duration,
     ) -> Result<Vec<u8>> {
         let now = Instant::now();
-        let enabled = || {
-            self.resolvers
-                .iter()
-                .filter(|(resolver, _)| resolver.enabled)
-        };
-        let ready: Vec<_> = enabled()
+        let ready: Vec<_> = self
+            .resolvers
+            .iter()
+            .filter(|(resolver, _)| resolver.enabled)
             .filter(|(_, cooldown)| !cooldown.lock().unwrap().is_some_and(|until| until > now))
             .collect();
         let candidates = if ready.is_empty() {
-            enabled().collect()
+            self.resolvers
+                .iter()
+                .filter(|(resolver, _)| resolver.enabled)
+                .collect()
         } else {
             ready
         };

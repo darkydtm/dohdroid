@@ -10,7 +10,7 @@ pub struct DohClient {
     clients: Mutex<HashMap<ClientKey, Client>>,
 }
 impl DohClient {
-    pub fn new(_resolvers: &[ResolverConfig]) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         Ok(Self {
             clients: Mutex::new(HashMap::new()),
         })
