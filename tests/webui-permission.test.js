@@ -5,12 +5,22 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync, spawnSync } = require('node:child_process');
 
+function createDaemonStub(binaryPath, logPath) {
+	const script = `#!/bin/sh
+printf '%s\n' "$*" >> "${logPath}"
+cat >/dev/null
+printf '{"ok":true,"result":"ok"}\n'
+`;
+	fs.writeFileSync(binaryPath, script, { mode: 0o755 });
+}
+
 const root = path.resolve(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'webui-test-'));
 try {
 	const scripts = path.join(dir, 'scripts');
 	const abi = execFileSync('uname', ['-m'], { encoding: 'utf8' }).trim();
 	const names = { aarch64: 'arm64-v8a', armv7l: 'armeabi-v7a', armv8l: 'armeabi-v7a', arm: 'armeabi-v7a', x86_64: 'x86_64', i686: 'x86', i386: 'x86' };
+	if (!names[abi]) throw new Error(`unsupported uname -m architecture: ${abi}`);
 	const bin = path.join(dir, 'system/bin', names[abi]);
 	fs.mkdirSync(scripts, { recursive: true });
 	fs.mkdirSync(bin, { recursive: true });
@@ -20,7 +30,7 @@ try {
 	fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
 	fs.copyFileSync(path.join(root, 'module/config/config.toml.example'), path.join(dir, 'config/config.toml.example'));
 	fs.chmodSync(path.join(scripts, 'webui.sh'), 0o644);
-	fs.writeFileSync(path.join(bin, 'dohd'), '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "' + path.join(dir, 'dohd.log') + '"\ncat >/dev/null\nprintf \'{"ok":true,"result":"ok"}\\n\'\n', { mode: 0o755 });
+	createDaemonStub(path.join(bin, 'dohd'), path.join(dir, 'dohd.log'));
 	const html = fs.readFileSync(path.join(root, 'module/webroot/index.html'), 'utf8');
 	assert.match(html, /href="styles\.css"/);
 	assert.match(html, /src="js\/api\.js"/);

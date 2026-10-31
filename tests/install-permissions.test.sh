@@ -5,16 +5,18 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 MODPATH="$TMP/module"
 OLD_MODDIR="$TMP/old"
+TEST_ABI=arm64-v8a
+TEST_BINARY=dohd
 export MODPATH DOHD_OLD_MODDIR="$OLD_MODDIR"
-mkdir -p "$MODPATH/scripts" "$MODPATH/system/bin/arm64-v8a"
+mkdir -p "$MODPATH/scripts" "$MODPATH/system/bin/$TEST_ABI"
 cp "$ROOT"/module/scripts/*.sh "$MODPATH/scripts/"
-printf '#!/bin/sh\nexit 0\n' > "$MODPATH/system/bin/arm64-v8a/dohd"
-chmod 0644 "$MODPATH"/scripts/*.sh "$MODPATH/system/bin/arm64-v8a/dohd"
+printf '#!/bin/sh\nexit 0\n' > "$MODPATH/system/bin/$TEST_ABI/$TEST_BINARY"
+chmod 0644 "$MODPATH"/scripts/*.sh "$MODPATH/system/bin/$TEST_ABI/$TEST_BINARY"
 set_perm() {
 	chmod "$4" "$1"
 }
 . "$ROOT/module/customize.sh"
-for file in "$MODPATH"/scripts/*.sh "$MODPATH"/system/bin/arm64-v8a/dohd; do
+for file in "$MODPATH"/scripts/*.sh "$MODPATH"/system/bin/$TEST_ABI/$TEST_BINARY; do
 	[ -x "$file" ] || { printf 'not executable: %s\n' "$file" >&2; exit 1; }
 done
 [ -f "$MODPATH/config/daemon-enabled" ]
@@ -25,21 +27,17 @@ rm -f "$MODPATH/config/daemon-enabled"
 [ ! -f "$MODPATH/config/daemon-enabled" ]
 
 cat > "$MODPATH/config/config.toml" <<'CONFIG'
-listen_address = "127.0.0.1"
-
 [[resolvers]]
 name = "cloudflare"
 url = "https://cloudflare-dns.com/dns-query"
-bootstrap_ips = ["1.1.1.1", "1.0.0.1"]
+bootstrap_ips = ["1.1.1.1"]
 enabled = true
-cooldown_seconds = 30
 
 [[resolvers]]
 name = "custom"
 url = "https://dns.example.org/dns-query"
 bootstrap_ips = []
 enabled = true
-cooldown_seconds = 30
 CONFIG
 export DOHD_OLD_MODDIR="$MODPATH"
 . "$ROOT/module/customize.sh"

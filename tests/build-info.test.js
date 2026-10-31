@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const directory = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'doh-build-info-'));
 try {
-	const branch = 'feature/test"branch';
+	const branch = 'feature/test\"branch\\path\nnext';
 	execFileSync('sh', ['scripts/build-info.sh', directory], { cwd: root, env: { ...process.env, BUILD_BRANCH: branch } });
 	const context = { window: {} };
 	vm.runInNewContext(fs.readFileSync(path.join(directory, 'build-info.js'), 'utf8'), context);

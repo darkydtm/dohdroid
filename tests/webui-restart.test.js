@@ -6,23 +6,31 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const nodes = new Map();
 const listeners = new Map();
-function node(selector) {
-	if (!nodes.has(selector)) nodes.set(selector, {
+const INITIAL_VALUES = { '#resolverUrl': 'https://example.com/dns', '#timeout': '5000 ms' };
+const CONFIG = { resolvers: [{ enabled: true, url: INITIAL_VALUES['#resolverUrl'] }], request_timeout_ms: 5000, fallback_mode: 'system' };
+function createInitialValues() {
+	return { ...INITIAL_VALUES };
+}
+function createElement(selector) {
+	return {
 		disabled: false,
-		value: selector === '#resolverUrl' ? 'https://example.com/dns' : selector === '#timeout' ? '5000 ms' : 'off',
+		value: createInitialValues()[selector] || 'off',
 		classList: { toggle() {} },
 		addEventListener(event, callback) { listeners.set(`${selector}:${event}`, callback); },
 		replaceChildren() {}, append() {},
-	});
+	};
+}
+function node(selector) {
+	if (!nodes.has(selector)) nodes.set(selector, createElement(selector));
 	return nodes.get(selector);
 }
-let restarted = 0;
+let restartCalls = 0;
 let resolveRestart;
-const config = { resolvers: [{ enabled: true, url: 'https://example.com/dns' }], request_timeout_ms: 5000, fallback_mode: 'system' };
+const config = CONFIG;
 const api = {
 	async request(operation) { return operation === 'get_config' ? config : {}; },
 	async stateRequest(operation) { return operation === 'daemon-status' ? { enabled: true, running: false } : false; },
-	restartDaemon() { restarted++; if (restarted === 1) return Promise.resolve(); return new Promise((resolve) => { resolveRestart = resolve; }); },
+	restartDaemon() { restartCalls++; return new Promise((resolve) => { resolveRestart = resolve; }); },
 };
 const document = {
 	documentElement: { dataset: {} },
@@ -35,10 +43,10 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, 'module/webroot/js/state.js'), 'utf8'), context);
 (async () => {
 	await context.window.dohdState.save(() => {}, (error) => { throw Error(error); });
-	assert.equal(restarted, 0, 'saving must not restart the daemon');
-	restarted = 1;
+	assert.equal(restartCalls, 0, 'saving must not restart the daemon');
 	vm.runInContext(fs.readFileSync(path.join(root, 'module/webroot/js/app.js'), 'utf8'), context);
-	const pending = listeners.get('#restartButton:click')();
+	const restartPendingScenario = listeners.get('#restartButton:click')();
+	const pending = restartPendingScenario;
 	assert.equal(node('#saveButton').disabled, true);
 	assert.equal(node('#testButton').disabled, true);
 	assert.equal(node('#restartButton').disabled, true);

@@ -39,24 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n module/service.sh module/boot-completed.sh module/uninstall.sh module/action.sh module/customize.sh package.sh module/scripts/*.sh scripts/*.sh
-      - run: node tests/webui-permission.test.js
-      - run: node tests/webui-theme.test.js
-      - run: node tests/webui-restart.test.js
-      - run: node tests/build-info.test.js
-      - run: sh tests/install-permissions.test.sh
-      - run: sh tests/private-dns.test.sh
-      - run: sh tests/firewall.test.sh
-      - run: sh tests/bootstrap.test.sh
-      - run: sh tests/boot-recovery.test.sh
-      - run: sh tests/description.test.sh
-      - run: sh tests/killswitch.test.sh
-      - run: sh tests/default-config.test.sh
-      - run: sh tests/service-system-dns.test.sh
-      - run: bash -n module/scripts/bootstrap.sh
-      - run: sh tests/process.test.sh
-      - run: sh tests/state.test.sh
-      - run: sh tests/tun-firewall.test.sh
+      - run: sh tests/run.sh
 
   build:
     name: Build ${{ matrix.abi }}
@@ -68,46 +51,62 @@ jobs:
           - abi: arm64-v8a
             target: aarch64-linux-android
             sing_arch: arm64
-            # Verify the downloaded sing-box archive against this SHA-256 digest.
             sing_sha: fb3a6c5197f4044f82c8fd75e01ce14c28b6abdd4c3df84bb987d41a962a320f
             linker: aarch64-linux-android24-clang
             cc: aarch64-linux-android24-clang
-            # Select the Cargo linker environment variable suffix.
             ar: llvm-ar
             # Select Cargo's target-specific linker environment variable suffix.
+            sing_sha: fb3a6c5197f4044f82c8fd75e01ce14c28b6abdd4c3df84bb987d41a962a320f
+            linker: aarch64-linux-android24-clang
+            cc: aarch64-linux-android24-clang
+            # Android target archiver executable.
+            ar: llvm-ar
+            # Rust target-specific linker environment suffix.
             cargo_target: AARCH64_LINUX_ANDROID
           - abi: armeabi-v7a
             target: armv7-linux-androideabi
             sing_arch: arm
-            # Verify the downloaded sing-box archive against this SHA-256 digest.
             sing_sha: a89f48c4f2691bf37476308212175ba7b7315db5ca03c0bf9b20d15f26bc70e9
             linker: armv7a-linux-androideabi24-clang
             cc: armv7a-linux-androideabi24-clang
-            # Select the Cargo linker environment variable suffix.
             ar: llvm-ar
             # Select Cargo's target-specific linker environment variable suffix.
+            sing_sha: a89f48c4f2691bf37476308212175ba7b7315db5ca03c0bf9b20d15f26bc70e9
+            linker: armv7a-linux-androideabi24-clang
+            cc: armv7a-linux-androideabi24-clang
+            # Android target archiver executable.
+            ar: llvm-ar
+            # Rust target-specific linker environment suffix.
             cargo_target: ARMV7_LINUX_ANDROIDEABI
           - abi: x86_64
             target: x86_64-linux-android
             sing_arch: amd64
-            # Verify the downloaded sing-box archive against this SHA-256 digest.
             sing_sha: e72a8eead1ace9ce84a4ed07dfbf364e87562b736463fc00967b845cf9b3b8ac
             linker: x86_64-linux-android24-clang
             cc: x86_64-linux-android24-clang
-            # Select the Cargo linker environment variable suffix.
             ar: llvm-ar
             # Select Cargo's target-specific linker environment variable suffix.
+            sing_sha: e72a8eead1ace9ce84a4ed07dfbf364e87562b736463fc00967b845cf9b3b8ac
+            linker: x86_64-linux-android24-clang
+            cc: x86_64-linux-android24-clang
+            # Android target archiver executable.
+            ar: llvm-ar
+            # Rust target-specific linker environment suffix.
             cargo_target: X86_64_LINUX_ANDROID
           - abi: x86
             target: i686-linux-android
             sing_arch: '386'
-            # Verify the downloaded sing-box archive against this SHA-256 digest.
             sing_sha: 6b715f5ee3d1ad1738da99e7c207db807a06560f623a2a44105dd3c34339fd93
             linker: i686-linux-android24-clang
             cc: i686-linux-android24-clang
-            # Select the Cargo linker environment variable suffix.
             ar: llvm-ar
             # Select Cargo's target-specific linker environment variable suffix.
+            sing_sha: 6b715f5ee3d1ad1738da99e7c207db807a06560f623a2a44105dd3c34339fd93
+            linker: i686-linux-android24-clang
+            cc: i686-linux-android24-clang
+            # Android target archiver executable.
+            ar: llvm-ar
+            # Rust target-specific linker environment suffix.
             cargo_target: I686_LINUX_ANDROID
     steps:
       - uses: actions/checkout@v4
@@ -126,6 +125,10 @@ jobs:
         with:
           packages: platform-tools
       - run: sdkmanager "ndk;${ANDROID_NDK_VERSION}"
+      - run: |
+          NDK_VERSION=26.3.11579264
+          echo "NDK_VERSION=$NDK_VERSION" >> "$GITHUB_ENV"
+          sdkmanager "ndk;$NDK_VERSION"
       - name: Build Android module
         env:
           TARGET: ${{ matrix.target }}
@@ -136,6 +139,7 @@ jobs:
         run: |
           . scripts/package-common.sh
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
           export CARGO_TARGET_${{ matrix.cargo_target }}_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$LINKER"
           target_env="${TARGET//-/_}"
           export "CC_${target_env}=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$CC_NAME"
@@ -195,3 +199,4 @@ jobs:
           done <<EOF
           $ABI_LIST
           EOF
+        run: sh scripts/verify-module-archive.sh "dohd-${{ matrix.abi }}.zip" "${{ matrix.abi }}"
