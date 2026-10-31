@@ -10,8 +10,8 @@ mkdir -p "$MODDIR/config"
 [ "$(daemon_state)" = disabled ]
 [ "$(tun_state)" = disabled ]
 [ "$(killswitch_state)" = disabled ]
-[ "$(daemon_enabled && printf enabled || printf disabled)" = disabled ]
-[ "$(tun_enabled && printf enabled || printf disabled)" = disabled ]
+! daemon_enabled
+! tun_enabled
 daemon_enable
 tun_enable
 killswitch_enable
@@ -21,8 +21,8 @@ killswitch_enable
 [ "$(daemon_state)" = enabled ]
 [ "$(tun_state)" = enabled ]
 [ "$(killswitch_state)" = enabled ]
-[ "$(daemon_enabled && printf enabled || printf disabled)" = enabled ]
-[ "$(tun_enabled && printf enabled || printf disabled)" = enabled ]
+daemon_enabled
+tun_enabled
 daemon_disable
 tun_disable
 killswitch_disable

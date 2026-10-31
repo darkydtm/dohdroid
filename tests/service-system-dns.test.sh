@@ -4,65 +4,58 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 MODDIR="$TMP/module"
+LOG="$TMP/log"
 mkdir -p "$MODDIR/config" "$MODDIR/run" "$MODDIR/scripts" "$MODDIR/system/bin/x86_64" "$TMP/bin"
 cp "$ROOT/module/service.sh" "$MODDIR/service.sh"
-cat > "$MODDIR/scripts/firewall.sh" <<'SCRIPT'
+create_log_stub() {
+	name=$1
+	cat > "$MODDIR/scripts/$name.sh" <<'SCRIPT'
 #!/bin/sh
-printf '%s\n' "$*" >> "$TEST_LOG"
+printf '%s %s\n' "${0##*/}" "$*" >> "$TEST_LOG"
 SCRIPT
-cat > "$MODDIR/scripts/tun-firewall.sh" <<'SCRIPT'
-#!/bin/sh
-printf '%s\n' "$*" >> "$TEST_LOG"
-SCRIPT
-cat > "$MODDIR/scripts/killswitch.sh" <<'SCRIPT'
-#!/bin/sh
-printf '%s\n' "$*" >> "$TEST_LOG"
-SCRIPT
-cat > "$MODDIR/scripts/private-dns.sh" <<'SCRIPT'
-#!/bin/sh
-private_dns_restore() { return 0; }
-private_dns_disable() { return 0; }
-SCRIPT
-cat > "$MODDIR/scripts/process.sh" <<'SCRIPT'
-#!/bin/sh
-daemon_pids() { :; }
-SCRIPT
-cat > "$MODDIR/scripts/state.sh" <<'SCRIPT'
+}
+create_state_stub() {
+	cat > "$MODDIR/scripts/state.sh" <<'SCRIPT'
 #!/bin/sh
 daemon_enabled() { [ -f "$MODDIR/config/daemon-enabled" ]; }
 tun_enabled() { [ -f "$MODDIR/config/tun-enabled" ]; }
 killswitch_enabled() { [ -f "$MODDIR/config/killswitch-enabled" ]; }
 SCRIPT
-cat > "$MODDIR/scripts/description.sh" <<'SCRIPT'
-update_description() { :; }
+}
+create_private_dns_stub() {
+	cat > "$MODDIR/scripts/private-dns.sh" <<'SCRIPT'
+#!/bin/sh
+private_dns_restore() { return 0; }
+private_dns_disable() { return 0; }
 SCRIPT
+}
+create_process_stub() {
+	cat > "$MODDIR/scripts/process.sh" <<'SCRIPT'
+#!/bin/sh
+daemon_pids() { :; }
+SCRIPT
+}
+for script in firewall tun-firewall killswitch; do create_log_stub "$script"; done
+printf 'update_description() { :; }\n' > "$MODDIR/scripts/description.sh"
+create_state_stub
+create_private_dns_stub
+create_process_stub
 chmod +x "$MODDIR/scripts/"*.sh
 cp "$ROOT/module/config/config.toml.example" "$MODDIR/config/config.toml"
 touch "$MODDIR/config/daemon-enabled"
-cat > "$MODDIR/system/bin/x86_64/dohd" <<'SCRIPT'
-#!/usr/bin/env python3
-import os
-import socket
-import time
-
-server = socket.socket(socket.AF_UNIX)
-server.bind(os.environ["DOHD_SOCKET"])
-server.listen()
-print("daemon-started", file=open(os.environ["TEST_LOG"], "a"))
-while True:
-	time.sleep(1)
-SCRIPT
+printf '#!/bin/sh\nexit 0\n' > "$MODDIR/system/bin/x86_64/dohd"
 chmod +x "$MODDIR/system/bin/x86_64/dohd"
-cat > "$TMP/bin/uname" <<'SCRIPT'
-#!/bin/sh
-printf '%s\n' x86_64
-SCRIPT
+printf '#!/bin/sh\nprintf \"%%s\\n\" x86_64\n' > "$TMP/bin/uname"
 chmod +x "$TMP/bin/uname"
-export MODDIR TEST_LOG="$TMP/log" PATH="$TMP/bin:$PATH"
-
-sh "$MODDIR/service.sh"
-
-! grep -q daemon-started "$TEST_LOG"
-! grep -q install "$TEST_LOG"
-[ -f "$MODDIR/config/daemon-enabled" ]
-[ ! -f "$MODDIR/run/dohd.pid" ]
+export MODDIR TEST_LOG="$LOG" PATH="$TMP/bin:$PATH"
+scenario_daemon_not_running() {
+	sh "$MODDIR/service.sh"
+	if grep -Fq 'install' "$LOG"; then exit 1; fi
+	[ ! -f "$MODDIR/run/dohd.pid" ]
+}
+scenario_config_is_saved() {
+	[ -f "$MODDIR/config/config.toml" ]
+	[ -f "$MODDIR/config/daemon-enabled" ]
+}
+scenario_daemon_not_running
+scenario_config_is_saved

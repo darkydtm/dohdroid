@@ -2,6 +2,9 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d)
+EXPECTED_BOOTSTRAP_IP=45.90.28.78
+EXPECTED_ACTIVE_IP=203.0.113.1
+PING_FAILURES=12 # Expected retries before the stub reports a successful lookup.
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/ping" <<'SCRIPT'
@@ -10,11 +13,11 @@ count=0
 [ -f "$PING_COUNT" ] && count=$(cat "$PING_COUNT")
 count=$((count + 1))
 printf '%s\n' "$count" > "$PING_COUNT"
-[ "$count" -gt 12 ] || exit 1
-printf '%s\n' 'PING dns.nextdns.io (45.90.28.78): 56 data bytes'
+[ "$count" -gt "$PING_FAILURES" ] || exit 1
+printf '%s\n' "PING dns.nextdns.io ($EXPECTED_BOOTSTRAP_IP): 56 data bytes"
 SCRIPT
 chmod +x "$TMP/bin/ping"
-export PING_COUNT="$TMP/ping-count" DOHD_BOOTSTRAP_DELAY=0
+export PING_COUNT="$TMP/ping-count" PING_FAILURES EXPECTED_BOOTSTRAP_IP EXPECTED_ACTIVE_IP DOHD_BOOTSTRAP_DELAY=0
 cat > "$TMP/config.toml" <<'CONFIG'
 url = "https://dns.nextdns.io/94f6c1"
 bootstrap_ips = []
@@ -35,7 +38,7 @@ grep -q 'bootstrap_ips = \["45.90.28.78"\]' "$TMP/config-with-bootstrap.toml"
 
 cat > "$TMP/bin/ping" <<'SCRIPT'
 #!/bin/sh
-printf '%s\n' 'PING active.example (203.0.113.1): 56 data bytes'
+printf '%s\n' "PING active.example ($EXPECTED_ACTIVE_IP): 56 data bytes"
 SCRIPT
 cat > "$TMP/config-active.toml" <<'CONFIG'
 [[resolvers]]
