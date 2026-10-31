@@ -7,7 +7,7 @@ MODULE="$TMP/module"
 BIN="$TMP/bin"
 LOG="$TMP/iptables.log"
 mkdir -p "$MODULE/scripts" "$MODULE/config" "$BIN"
-cp "$ROOT/module/scripts/firewall.sh" "$MODULE/scripts/firewall.sh"
+cp "$ROOT/module/scripts/firewall.sh" "$ROOT/module/scripts/iptables-backend.sh" "$MODULE/scripts/"
 create_iptables_stub() {
 	cat > "$BIN/iptables" <<'SCRIPT'
 #!/bin/sh
