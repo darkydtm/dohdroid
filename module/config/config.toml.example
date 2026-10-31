@@ -1,12 +1,12 @@
 listen_address = "127.0.0.1"
 listen_port = 5353
-# Connection-establishment timeout in milliseconds; typical range: 500-10000 ms.
+# Connection-establishment timeout in milliseconds; 3000 ms is a typical range for local DNS.
 connect_timeout_ms = 3000
-# End-to-end DNS request timeout in milliseconds; typical range: 1000-30000 ms.
+# Total DNS request timeout in milliseconds; 5000 ms allows for upstream resolver retries.
 request_timeout_ms = 5000
 cache_enabled = true
-# Maximum cached DNS entries (count); typical range: 256-65536 entries.
+# Maximum number of cached DNS records; 4096 is a moderate default for a device.
 cache_capacity = 4096
 fallback_mode = "system"
-# Empty uses the configured system resolver source; there is no additional resolver fallback list.
+# An empty list uses configured system resolvers and adds no extra fallback resolvers.
 resolvers = []

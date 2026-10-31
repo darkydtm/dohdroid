@@ -1,26 +1,28 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+. "$ROOT/scripts/package-common.sh"
+
+for abi in $ABI_LIST; do
 	OUT="$ROOT/module/package-$abi"
+	STAGING=$OUT
+	trap 'exit 1' HUP INT TERM
+	cleanup() {
+		rm -rf "$STAGING"
+	}
+	trap cleanup EXIT
+
+	# Prepare staging.
 	rm -rf "$OUT"
 	mkdir -p "$OUT/config" "$OUT/system/bin/$abi"
-	cp "$ROOT/module/module.prop" "$ROOT/module/service.sh" "$ROOT/module/boot-completed.sh" "$ROOT/module/uninstall.sh" "$ROOT/module/action.sh" "$ROOT/module/customize.sh" "$OUT/"
-	cp "$ROOT/module/config/config.toml.example" "$ROOT/module/config/tun.json" "$OUT/config/"
-	cp -R "$ROOT/module/scripts" "$OUT/scripts"
-	cp -R "$ROOT/module/webroot" "$OUT/webroot"
-	sh "$ROOT/scripts/build-info.sh" "$OUT/webroot"
-	chmod 0755 "$OUT/scripts/"*.sh
-	binary="$ROOT/daemon/target/$abi/release/dohd"
-	[ -x "$binary" ] || { echo "missing binary: $binary" >&2; exit 1; }
-	cp "$binary" "$OUT/system/bin/$abi/dohd"
-	sing_box="$ROOT/daemon/target/$abi/release/sing-box"
-	[ -x "$sing_box" ] || { echo "missing binary: $sing_box" >&2; exit 1; }
-	cp "$sing_box" "$OUT/system/bin/$abi/sing-box"
-	chmod 0755 "$OUT/system/bin/$abi/sing-box"
-	chmod 0755 "$OUT/system/bin/$abi/dohd"
-	chmod 0755 "$OUT"/*.sh
+
+	stage_module "$ROOT" "$abi" "$OUT"
+
+	# Create the ZIP archive.
 	(cd "$OUT" && zip -qr "$ROOT/dohd-$abi.zip" .)
+
+	# Write the SHA-256 checksum.
 	sha256sum "$ROOT/dohd-$abi.zip" > "$ROOT/dohd-$abi.zip.sha256"
-	rm -rf "$OUT"
+	cleanup
+	trap - EXIT
 done
