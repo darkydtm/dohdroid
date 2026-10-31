@@ -30,19 +30,17 @@ impl ResolverPool {
         request_timeout: Duration,
     ) -> Result<Vec<u8>> {
         let now = Instant::now();
-        let enabled = || {
-            self.resolvers
-                .iter()
-                .filter(|(resolver, _)| resolver.enabled)
-        };
-        let ready: Vec<_> = enabled()
+        let enabled: Vec<_> = self
+            .resolvers
+            .iter()
+            .filter(|(resolver, _)| resolver.enabled)
+            .collect();
+        let ready: Vec<_> = enabled
+            .iter()
+            .copied()
             .filter(|(_, cooldown)| !cooldown.lock().unwrap().is_some_and(|until| until > now))
             .collect();
-        let candidates = if ready.is_empty() {
-            enabled().collect()
-        } else {
-            ready
-        };
+        let candidates = if ready.is_empty() { enabled } else { ready };
         for (resolver, cooldown) in candidates {
             match self
                 .client
@@ -58,9 +56,12 @@ impl ResolverPool {
             }
         }
         match fallback {
-            FallbackMode::Servfail => anyhow::bail!("all DoH resolvers failed"),
-            FallbackMode::Disabled | FallbackMode::System => {
-                anyhow::bail!("all DoH resolvers failed")
+            FallbackMode::Servfail => anyhow::bail!("all DoH resolvers failed; return SERVFAIL"),
+            FallbackMode::Disabled => {
+                anyhow::bail!("all DoH resolvers failed; fallback is disabled")
+            }
+            FallbackMode::System => {
+                anyhow::bail!("all DoH resolvers failed; system DNS fallback is unavailable")
             }
         }
     }
