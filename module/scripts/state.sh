@@ -1,61 +1,36 @@
 #!/system/bin/sh
-
-daemon_enabled() {
-	[ -f "$MODDIR/config/daemon-enabled" ]
+# shellcheck shell=sh
+set -eu
+# Source after setting MODDIR to the module root.
+state_path() {
+	printf '%s/config/%s-enabled\n' "$MODDIR" "$1"
 }
 
-daemon_state() {
-	if daemon_enabled; then
-		printf '%s\n' enabled
-	else
-		printf '%s\n' disabled
-	fi
+flag_enabled() {
+	[ -f "$(state_path "$1")" ]
 }
 
-daemon_enable() {
-	touch "$MODDIR/config/daemon-enabled"
+flag_state() {
+	if flag_enabled "$1"; then printf '%s\n' enabled; else printf '%s\n' disabled; fi
 }
 
-daemon_disable() {
-	rm -f "$MODDIR/config/daemon-enabled"
+flag_enable() {
+	touch "$(state_path "$1")"
 }
 
-tun_enabled() {
-	[ -f "$MODDIR/config/tun-enabled" ]
+flag_disable() {
+	rm -f "$(state_path "$1")"
 }
 
-tun_state() {
-	if tun_enabled; then
-		printf '%s\n' enabled
-	else
-		printf '%s\n' disabled
-	fi
-}
-
-tun_enable() {
-	touch "$MODDIR/config/tun-enabled"
-}
-
-tun_disable() {
-	rm -f "$MODDIR/config/tun-enabled"
-}
-
-killswitch_enabled() {
-	[ -f "$MODDIR/config/killswitch-enabled" ]
-}
-
-killswitch_state() {
-	if killswitch_enabled; then
-		printf '%s\n' enabled
-	else
-		printf '%s\n' disabled
-	fi
-}
-
-killswitch_enable() {
-	touch "$MODDIR/config/killswitch-enabled"
-}
-
-killswitch_disable() {
-	rm -f "$MODDIR/config/killswitch-enabled"
-}
+daemon_enabled() { flag_enabled daemon; }
+daemon_state() { flag_state daemon; }
+daemon_enable() { flag_enable daemon; }
+daemon_disable() { flag_disable daemon; }
+tun_enabled() { flag_enabled tun; }
+tun_state() { flag_state tun; }
+tun_enable() { flag_enable tun; }
+tun_disable() { flag_disable tun; }
+killswitch_enabled() { flag_enabled killswitch; }
+killswitch_state() { flag_state killswitch; }
+killswitch_enable() { flag_enable killswitch; }
+killswitch_disable() { flag_disable killswitch; }

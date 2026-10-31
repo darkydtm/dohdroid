@@ -1,4 +1,7 @@
 #!/system/bin/sh
-MODDIR=${0%/*}
+set -eu
+SCRIPT_DIR=${0%/*}
+MODDIR=${SCRIPT_DIR%/*}
 PIDFILE="$MODDIR/run/dohd.pid"
-[ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+. "$SCRIPT_DIR/process.sh"
+[ -f "$PIDFILE" ] && pid=$(cat "$PIDFILE") && kill -0 "$pid" 2>/dev/null && process_matches "$pid"

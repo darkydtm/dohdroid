@@ -1,19 +1,41 @@
 #!/system/bin/sh
 set -eu
 MODDIR=${0%/*}
-PIDFILE="$MODDIR/run/dohd.pid"
 SOCKET="$MODDIR/run/dohd.sock"
-if [ -f "$PIDFILE" ]; then
-	kill "$(cat "$PIDFILE")" 2>/dev/null || true
-	rm -f "$PIDFILE"
-fi
-"$MODDIR/scripts/firewall.sh" remove 2>/dev/null || true
+. "$MODDIR/scripts/process.sh"
+stop_managed_process() { stop_process "$1"; }
 . "$MODDIR/scripts/private-dns.sh"
-private_dns_restore || true
-"$MODDIR/scripts/tun-firewall.sh" remove 2>/dev/null || true
-"$MODDIR/scripts/killswitch.sh" remove 2>/dev/null || true
-rm -f "$MODDIR/config/daemon-enabled" "$MODDIR/config/tun-enabled" "$MODDIR/config/killswitch-enabled"
-if [ -f "$MODDIR/run/tun.pid" ]; then
-	kill "$(cat "$MODDIR/run/tun.pid")" 2>/dev/null || true
-fi
-rm -f "$SOCKET"
+
+remove_daemon() {
+	if [ -f "$MODDIR/run/dohd.pid" ]; then
+		pid=$(cat "$MODDIR/run/dohd.pid")
+		stop_managed_process "$pid" || :
+		rm -f "$MODDIR/run/dohd.pid"
+	fi
+}
+
+remove_tun() {
+	"$MODDIR/scripts/tun-firewall.sh" remove 2>/dev/null || :
+	if [ -f "$MODDIR/run/tun.pid" ]; then
+		pid=$(cat "$MODDIR/run/tun.pid")
+		stop_managed_process "$pid" || :
+		rm -f "$MODDIR/run/tun.pid"
+	fi
+}
+
+remove_network_rules() {
+	"$MODDIR/scripts/firewall.sh" remove 2>/dev/null || :
+	"$MODDIR/scripts/killswitch.sh" remove 2>/dev/null || :
+}
+
+remove_state() {
+	private_dns_restore || :
+	rm -f "$MODDIR/config/daemon-enabled" "$MODDIR/config/tun-enabled" "$MODDIR/config/killswitch-enabled"
+	rm -f "$SOCKET"
+}
+
+# Preserve cleanup order: processes, firewall rules, saved settings, then flags.
+remove_daemon
+remove_tun
+remove_network_rules
+remove_state

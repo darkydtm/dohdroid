@@ -1,15 +1,23 @@
 #!/system/bin/sh
 set -eu
-MODDIR=${0%/*/*}
-. "$MODDIR/scripts/state.sh"
-. "$MODDIR/scripts/process.sh"
+SCRIPT_DIR=${0%/*}
+MODDIR=${SCRIPT_DIR%/*}
+. "$SCRIPT_DIR/state.sh"
+. "$SCRIPT_DIR/process.sh"
 CONFIG="$MODDIR/config/config.toml"
-EXAMPLE_CONFIG="$MODDIR/config/config.toml.example"
 
-if [ ! -f "$CONFIG" ]; then
-	mkdir -p "$MODDIR/config"
-	cp "$EXAMPLE_CONFIG" "$CONFIG"
-fi
+ensure_user_config() {
+	# Create the config only for config/control commands, never status requests.
+	if [ ! -f "$CONFIG" ]; then mkdir -p "$MODDIR/config"; cp "$MODDIR/config/config.toml.example" "$CONFIG"; fi
+}
+
+respond_boolean() {
+	if "$1"; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
+}
+
+set_flag_from_command() {
+	case "$1" in *-enable) "$2" enable ;; *-disable) "$2" disable ;; *) return 2 ;; esac
+}
 
 case "${1:-}" in
 	daemon-status)
@@ -18,25 +26,21 @@ case "${1:-}" in
 		printf '{"ok":true,"result":{"enabled":%s,"running":%s}}\n' "$enabled" "$running"
 		exit 0
 		;;
-	killswitch-status)
-		if killswitch_enabled; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
-		exit 0
-		;;
+	killswitch-status) respond_boolean killswitch_enabled; exit 0 ;;
 	killswitch-enable|killswitch-disable)
-		if [ "$1" = killswitch-enable ]; then killswitch_enable; else killswitch_disable; fi
-		printf '%s\n' '{"ok":true,"result":true}'
+		case "$1" in *-enable) killswitch_enable ;; *) killswitch_disable ;; esac
+		respond_boolean true
 		exit 0
 		;;
-	tun-status)
-		if tun_enabled; then printf '%s\n' '{"ok":true,"result":true}'; else printf '%s\n' '{"ok":true,"result":false}'; fi
-		exit 0
-		;;
+	tun-status) respond_boolean tun_enabled; exit 0 ;;
 	tun-enable|tun-disable)
-		if [ "$1" = tun-enable ]; then tun_enable; else tun_disable; fi
-		printf '%s\n' '{"ok":true,"result":true}'
+		case "$1" in *-enable) tun_enable ;; *) tun_disable ;; esac
+		respond_boolean true
 		exit 0
 		;;
 esac
+
+ensure_user_config
 case "$(uname -m)" in
 	aarch64) ABI=arm64-v8a ;;
 	armv7l|armv8l|arm) ABI=armeabi-v7a ;;

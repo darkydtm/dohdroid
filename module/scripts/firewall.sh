@@ -1,36 +1,32 @@
 #!/system/bin/sh
 set -eu
-MODDIR=${0%/*}
+SCRIPT_DIR=${0%/*}
+. "$SCRIPT_DIR/iptables-backend.sh"
 CHAIN=DOHD_DNS
 PORT=${DOHD_PORT:-5353}
-backend=${DOHD_IPTABLES:-}
-if [ -z "$backend" ]; then
-	for candidate in /system/bin/iptables /system/bin/iptables-legacy /system/bin/nft; do
-		if [ -x "$candidate" ]; then backend="$candidate"; break; fi
-	done
-fi
-[ -n "$backend" ] || exit 1
-iptables_mode() {
-	case "${1:-status}" in
-		install)
-			"$backend" -t nat -N "$CHAIN" 2>/dev/null || true
-			"$backend" -t nat -F "$CHAIN"
-			"$backend" -t nat -A "$CHAIN" -p udp --dport 53 -j REDIRECT --to-ports "$PORT"
-			"$backend" -t nat -A "$CHAIN" -p tcp --dport 53 -j REDIRECT --to-ports "$PORT"
-			"$backend" -t nat -C OUTPUT -j "$CHAIN" 2>/dev/null || "$backend" -t nat -A OUTPUT -j "$CHAIN"
-			;;
-		remove)
-			"$backend" -t nat -C OUTPUT -j "$CHAIN" 2>/dev/null && "$backend" -t nat -D OUTPUT -j "$CHAIN" || true
-			"$backend" -t nat -F "$CHAIN" 2>/dev/null || true
-			"$backend" -t nat -X "$CHAIN" 2>/dev/null || true
-			;;
-		status)
-			"$backend" -t nat -L "$CHAIN" >/dev/null 2>&1
-			;;
-		*) exit 2 ;;
-	esac
+backend=$(select_iptables_backend) || exit 1
+
+install_rules() {
+	if ! "$backend" -t nat -N "$CHAIN" 2>/dev/null; then
+		"$backend" -t nat -L "$CHAIN" >/dev/null 2>&1 || return 1
+	fi
+	"$backend" -t nat -F "$CHAIN"
+	"$backend" -t nat -A "$CHAIN" -p udp --dport 53 -j REDIRECT --to-ports "$PORT"
+	"$backend" -t nat -A "$CHAIN" -p tcp --dport 53 -j REDIRECT --to-ports "$PORT"
+	if ! "$backend" -t nat -C OUTPUT -j "$CHAIN" 2>/dev/null; then "$backend" -t nat -A OUTPUT -j "$CHAIN"; fi
 }
-case "$backend" in
-	*/nft) exit 1 ;;
-	*) iptables_mode "${1:-status}" ;;
+
+remove_rules() {
+	if "$backend" -t nat -C OUTPUT -j "$CHAIN" 2>/dev/null; then "$backend" -t nat -D OUTPUT -j "$CHAIN"; fi
+	if "$backend" -t nat -L "$CHAIN" >/dev/null 2>&1; then
+		"$backend" -t nat -F "$CHAIN" || return 1
+		"$backend" -t nat -X "$CHAIN"
+	fi
+}
+
+case "${1:-status}" in
+	install) install_rules ;;
+	remove) remove_rules ;;
+	status) "$backend" -t nat -L "$CHAIN" >/dev/null 2>&1 ;;
+	*) exit 2 ;;
 esac
