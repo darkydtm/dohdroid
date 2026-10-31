@@ -33,7 +33,7 @@ const context = {
 		setItem: (key, value) => saved.set(key, value),
 	},
 	window: {
-		dohdState: { elements: { url: getElement('#resolverUrl'), timeout: getElement('#timeout') }, load() {}, save() {}, validate() { return true; } },
+		dohdState: { formElements: { url: getElement('#resolverUrl'), timeout: getElement('#timeout') }, statusElements: { daemonStatus: getElement('#daemonStatus'), daemonStatusText: getElement('#daemonStatusText') }, load() {}, save() {}, validate() { return true; } },
 		dohdApi: { request: async () => ({}), restartDaemon: async () => {} },
 	},
 };
