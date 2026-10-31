@@ -43,7 +43,7 @@ try {
 	assert.match(fs.readFileSync(path.join(root, 'module/webroot/js/app.js'), 'utf8'), /dohd-theme/);
 	assert.equal(fs.existsSync(path.join(root, 'webui-prototype.html')), false);
 	const request = fs.readFileSync(path.join(root, 'module/webroot/js/api.js'), 'utf8');
-	const context = { window: {}, Promise, JSON, Error };
+	const context = { window: {}, Promise, JSON, Error, setTimeout, clearTimeout };
 	context.ksu = context.window.ksu = {
 		exec(command, options, callback) {
 			const result = spawnSync('sh', ['-c', command.replace('/data/adb/modules/doh-dns', dir)], { encoding: 'utf8' });
