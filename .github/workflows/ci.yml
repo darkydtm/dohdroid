@@ -56,13 +56,10 @@ jobs:
             linker: aarch64-linux-android24-clang
             cc: aarch64-linux-android24-clang
             ar: llvm-ar
-            # Select Cargo's target-specific linker environment variable suffix.
             sing_sha: fb3a6c5197f4044f82c8fd75e01ce14c28b6abdd4c3df84bb987d41a962a320f
             linker: aarch64-linux-android24-clang
             cc: aarch64-linux-android24-clang
-            # Android target archiver executable.
             ar: llvm-ar
-            # Rust target-specific linker environment suffix.
             cargo_target: AARCH64_LINUX_ANDROID
           - abi: armeabi-v7a
             target: armv7-linux-androideabi
@@ -71,13 +68,10 @@ jobs:
             linker: armv7a-linux-androideabi24-clang
             cc: armv7a-linux-androideabi24-clang
             ar: llvm-ar
-            # Select Cargo's target-specific linker environment variable suffix.
             sing_sha: a89f48c4f2691bf37476308212175ba7b7315db5ca03c0bf9b20d15f26bc70e9
             linker: armv7a-linux-androideabi24-clang
             cc: armv7a-linux-androideabi24-clang
-            # Android target archiver executable.
             ar: llvm-ar
-            # Rust target-specific linker environment suffix.
             cargo_target: ARMV7_LINUX_ANDROIDEABI
           - abi: x86_64
             target: x86_64-linux-android
@@ -86,13 +80,10 @@ jobs:
             linker: x86_64-linux-android24-clang
             cc: x86_64-linux-android24-clang
             ar: llvm-ar
-            # Select Cargo's target-specific linker environment variable suffix.
             sing_sha: e72a8eead1ace9ce84a4ed07dfbf364e87562b736463fc00967b845cf9b3b8ac
             linker: x86_64-linux-android24-clang
             cc: x86_64-linux-android24-clang
-            # Android target archiver executable.
             ar: llvm-ar
-            # Rust target-specific linker environment suffix.
             cargo_target: X86_64_LINUX_ANDROID
           - abi: x86
             target: i686-linux-android
@@ -101,13 +92,10 @@ jobs:
             linker: i686-linux-android24-clang
             cc: i686-linux-android24-clang
             ar: llvm-ar
-            # Select Cargo's target-specific linker environment variable suffix.
             sing_sha: 6b715f5ee3d1ad1738da99e7c207db807a06560f623a2a44105dd3c34339fd93
             linker: i686-linux-android24-clang
             cc: i686-linux-android24-clang
-            # Android target archiver executable.
             ar: llvm-ar
-            # Rust target-specific linker environment suffix.
             cargo_target: I686_LINUX_ANDROID
     steps:
       - uses: actions/checkout@v4

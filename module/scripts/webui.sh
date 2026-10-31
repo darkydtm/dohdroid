@@ -7,7 +7,6 @@ MODDIR=${SCRIPT_DIR%/*}
 CONFIG="$MODDIR/config/config.toml"
 
 ensure_user_config() {
-	# Create the config only for config/control commands, never status requests.
 	if [ ! -f "$CONFIG" ]; then mkdir -p "$MODDIR/config"; cp "$MODDIR/config/config.toml.example" "$CONFIG"; fi
 }
 

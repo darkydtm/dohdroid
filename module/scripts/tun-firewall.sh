@@ -36,7 +36,6 @@ install_one_family() {
 }
 
 rollback() {
-	# Roll back both families in reverse install order, including partial installs.
 	cleanup_family -6 "$IP6TABLES" || :
 	cleanup_family -4 "$IPTABLES" || :
 }

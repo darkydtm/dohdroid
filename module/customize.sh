@@ -45,7 +45,6 @@ migrate_config() {
 		mv "$tmp" "$MODPATH/config/config.toml"
 		set_perm "$MODPATH/config/config.toml" 0 0 0600
 	fi
-	# Preserve resolver configuration and daemon, TUN, and killswitch enable flags.
 	if [ ! -d "$old_moddir/config" ] || [ -f "$old_moddir/config/daemon-enabled" ]; then touch "$MODPATH/config/daemon-enabled"; fi
 	if [ -f "$old_moddir/config/tun-enabled" ] && [ "$MODPATH" != "$old_moddir" ]; then touch "$MODPATH/config/tun-enabled"; fi
 	if [ -f "$old_moddir/config/killswitch-enabled" ] && [ "$MODPATH" != "$old_moddir" ]; then touch "$MODPATH/config/killswitch-enabled"; fi

@@ -12,16 +12,13 @@ for abi in $ABI_LIST; do
 	}
 	trap cleanup EXIT
 
-	# Prepare staging.
 	rm -rf "$OUT"
 	mkdir -p "$OUT/config" "$OUT/system/bin/$abi"
 
 	stage_module "$ROOT" "$abi" "$OUT"
 
-	# Create the ZIP archive.
 	(cd "$OUT" && zip -qr "$ROOT/dohd-$abi.zip" .)
 
-	# Write the SHA-256 checksum.
 	sha256sum "$ROOT/dohd-$abi.zip" > "$ROOT/dohd-$abi.zip.sha256"
 	cleanup
 	trap - EXIT

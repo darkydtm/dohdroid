@@ -34,7 +34,6 @@ remove_state() {
 	rm -f "$SOCKET"
 }
 
-# Preserve cleanup order: processes, firewall rules, saved settings, then flags.
 remove_daemon
 remove_tun
 remove_network_rules

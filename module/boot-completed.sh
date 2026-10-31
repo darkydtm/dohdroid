@@ -7,7 +7,6 @@ BOOT_COMPLETED_INTERVAL=5 # Seconds between service start attempts.
 . "$MODDIR/scripts/process.sh"
 . "$MODDIR/scripts/description.sh"
 
-# Keep retries isolated because startup depends on modules and network timing.
 retry_startup() {
 	attempt=0
 	while daemon_enabled && [ "$attempt" -lt "$BOOT_COMPLETED_RETRY_MAX" ]; do

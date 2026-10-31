@@ -56,7 +56,6 @@ stop_daemon() {
 	rm -f "$SOCKET" "$PIDFILE"
 }
 
-# Continue cleanup when removing absent firewall rules or rolling back failure.
 cleanup_optional() { "$1" remove || :; }
 
 stop_managed_process() { stop_process "$1"; }

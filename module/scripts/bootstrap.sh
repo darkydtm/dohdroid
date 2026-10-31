@@ -1,7 +1,6 @@
 #!/system/bin/sh
 set -eu
 
-# Resolve the first enabled resolver that needs bootstrap addresses.
 select_resolver() {
 	awk '
 		function select_resolver() {
@@ -16,12 +15,10 @@ select_resolver() {
 	' "$1"
 }
 
-# Return the parsed ping address for a resolver hostname.
 resolve_host() {
 	ping -c "$BOOTSTRAP_COUNT" -W 1 "$1" 2>/dev/null | sed -n 's/^PING [^(]*(\([^)]*\)).*/\1/p' | head -n 1
 }
 
-# Retry name resolution at a bounded interval before failing startup.
 wait_for_bootstrap() {
 	host=$1
 	attempt=1
@@ -48,7 +45,6 @@ replace_bootstrap_ips() {
 }
 
 main() {
-	# Override defaults with DOHD_BOOTSTRAP_ATTEMPTS and DOHD_BOOTSTRAP_DELAY.
 	BOOTSTRAP_RETRY_MAX=${DOHD_BOOTSTRAP_ATTEMPTS:-60} # Number of hostname lookups.
 	BOOTSTRAP_DELAY=${DOHD_BOOTSTRAP_DELAY:-2} # Seconds between failed lookups.
 	BOOTSTRAP_COUNT=1 # ICMP packets per hostname lookup.

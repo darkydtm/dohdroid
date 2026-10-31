@@ -1,5 +1,4 @@
 # shellcheck shell=sh
-# Source after setting MODDIR to the module root.
 update_module_description() {
 	status=$1
 	url=$(awk -F'"' '/^[[:space:]]*url[[:space:]]*=/ { print $2; exit }' "$MODDIR/config/config.toml" 2>/dev/null || :)

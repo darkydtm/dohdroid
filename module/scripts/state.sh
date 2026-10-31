@@ -1,7 +1,6 @@
 #!/system/bin/sh
 # shellcheck shell=sh
 set -eu
-# Source after setting MODDIR to the module root.
 state_path() {
 	printf '%s/config/%s-enabled\n' "$MODDIR" "$1"
 }

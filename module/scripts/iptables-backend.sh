@@ -1,6 +1,5 @@
 #!/system/bin/sh
 # shellcheck shell=sh
-# Source after setting MODDIR; DOHD_IPTABLES may override backend discovery.
 select_iptables_backend() {
 	backend=${DOHD_IPTABLES:-}
 	if [ -n "$backend" ]; then

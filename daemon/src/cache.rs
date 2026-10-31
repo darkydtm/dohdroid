@@ -18,7 +18,6 @@ pub struct DnsCache {
     lru: VecDeque<Vec<u8>>,
 }
 
-/// Evict the least-recently-used live entry; TTL expiry remains authoritative.
 impl DnsCache {
     pub fn new(capacity: usize) -> Self {
         Self {
@@ -106,7 +105,6 @@ pub struct CachingHandler<H> {
     inner: H,
     cache: Arc<Mutex<DnsCache>>,
     enabled: bool,
-    // Keep only weak per-key locks so idle keys do not grow this map forever.
     in_flight: Arc<tokio::sync::Mutex<HashMap<Vec<u8>, Weak<tokio::sync::Mutex<()>>>>>,
 }
 impl<H> CachingHandler<H> {

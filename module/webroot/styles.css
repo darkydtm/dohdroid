@@ -30,13 +30,13 @@
   --md-sys-color-outline: var(--outline, #8d9099);
   --md-sys-color-outline-variant: var(--outlineVariant, #43474f);
   --md-sys-color-shadow: var(--shadow, #000000);
-  /* Shape tokens */
+
   --md-sys-shape-small: 8px;
   --md-sys-shape-medium: 16px;
   --md-sys-shape-large: 24px;
   --md-sys-shape-extra-large: 32px;
   --md-sys-shape-full: 999px;
-  /* Motion and typography tokens */
+
   --md-motion-standard: 220ms cubic-bezier(0.2, 0, 0, 1);
   --md-typescale-display: clamp(2.4rem, 7vw, 4.8rem);
   --md-typescale-title: 1.5rem;

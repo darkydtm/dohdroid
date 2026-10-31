@@ -1,5 +1,4 @@
 # shellcheck shell=sh
-# Source after setting MODDIR; state stores the original Android setting verbatim.
 private_dns_state_path() { printf '%s/run/private-dns-mode\n' "$MODDIR"; }
 
 private_dns_read_mode() {

@@ -10,7 +10,6 @@ pub struct DohClient {
     clients: Mutex<HashMap<ClientKey, Client>>,
 }
 impl DohClient {
-    // Keep the resolver argument to preserve the public constructor contract.
     pub fn new(_resolvers: &[ResolverConfig]) -> Result<Self> {
         Ok(Self {
             clients: Mutex::new(HashMap::new()),

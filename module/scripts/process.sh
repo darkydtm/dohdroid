@@ -1,11 +1,9 @@
 #!/system/bin/sh
 set -eu
-# Source after setting MODDIR to the module root.
 process_matches() {
 	pid=$1
 	process="${PROC_ROOT:-/proc}/$pid"
 	[ -r "$process/cmdline" ] && [ -r "$process/environ" ] || return 1
-	# Proc argv and environment entries are NUL-delimited; match executable and config exactly.
 	command=$(tr '\000' '\n' < "$process/cmdline" | { IFS= read -r line; printf '%s' "$line"; })
 	case "$command" in "$MODDIR"/system/bin/*/dohd) ;; *) return 1 ;; esac
 	tr '\000' '\n' < "$process/environ" | grep -Fx "DOHD_CONFIG=$MODDIR/config/config.toml" >/dev/null
@@ -27,7 +25,6 @@ stop_process() {
 	[ "$pid" -gt 1 ] 2>/dev/null || return 2
 	if ! kill -0 "$pid" 2>/dev/null; then return 0; fi
 	kill "$pid" || return 1
-	# Allow five one-second checks for process exit, matching service and uninstall.
 	attempt=0
 	while [ "$attempt" -lt "$cleanup_loop_max" ]; do
 		kill -0 "$pid" 2>/dev/null || return 0
