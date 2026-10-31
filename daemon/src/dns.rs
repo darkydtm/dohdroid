@@ -19,7 +19,13 @@ pub trait DnsHandler: Send + Sync {
 
 pub struct DohHandler {
     config: ConfigStore,
-    pool: Mutex<(Vec<ResolverConfig>, FallbackMode, Arc<ResolverPool>)>,
+    pool: Mutex<ResolverPoolState>,
+}
+
+struct ResolverPoolState {
+    resolver_configs: Vec<ResolverConfig>,
+    fallback_mode: FallbackMode,
+    resolver_pool: Arc<ResolverPool>,
 }
 
 impl DohHandler {
@@ -28,7 +34,11 @@ impl DohHandler {
         let pool = ResolverPool::new(initial.resolvers.clone())?;
         Ok(Self {
             config,
-            pool: Mutex::new((initial.resolvers, initial.fallback_mode, Arc::new(pool))),
+            pool: Mutex::new(ResolverPoolState {
+                resolver_configs: initial.resolvers,
+                fallback_mode: initial.fallback_mode,
+                resolver_pool: Arc::new(pool),
+            }),
         })
     }
 }
@@ -36,20 +46,37 @@ impl DohHandler {
 #[async_trait]
 impl DnsHandler for DohHandler {
     async fn handle(&self, query: Vec<u8>) -> Result<Vec<u8>> {
-        let mut pool = self.pool.lock().await;
         let config = self.config.snapshot();
         let connect_timeout = config.connect_timeout();
         let request_timeout = config.request_timeout();
-        if pool.0 != config.resolvers || pool.1 != config.fallback_mode {
-            *pool = (
-                config.resolvers.clone(),
-                config.fallback_mode,
-                Arc::new(ResolverPool::new(config.resolvers)?),
-            );
-        }
-        let fallback = pool.1.clone();
-        let resolver = Arc::clone(&pool.2);
-        drop(pool);
+        let (resolver_configs, fallback_mode) = {
+            let state = self.pool.lock().await;
+            (state.resolver_configs.clone(), state.fallback_mode.clone())
+        };
+        let replacement =
+            if resolver_configs != config.resolvers || fallback_mode != config.fallback_mode {
+                Some(Arc::new(ResolverPool::new(config.resolvers.clone())?))
+            } else {
+                None
+            };
+        let (fallback, resolver) = {
+            let mut state = self.pool.lock().await;
+            if state.resolver_configs != config.resolvers
+                || state.fallback_mode != config.fallback_mode
+            {
+                let next_pool = match replacement {
+                    Some(pool) => pool,
+                    None => Arc::new(ResolverPool::new(config.resolvers.clone())?),
+                };
+                state.resolver_pool = next_pool;
+                state.resolver_configs = config.resolvers;
+                state.fallback_mode = config.fallback_mode;
+            }
+            (
+                state.fallback_mode.clone(),
+                Arc::clone(&state.resolver_pool),
+            )
+        };
         resolver
             .resolve(&query, &fallback, connect_timeout, request_timeout)
             .await
@@ -98,11 +125,11 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
         let permits = Arc::new(Semaphore::new(128));
         let mut buffer = [0u8; MAX_DNS_PACKET];
         loop {
-            let permit = Arc::clone(&permits).acquire_owned().await?;
             let (size, peer) = socket.recv_from(&mut buffer).await?;
             if size == 0 {
                 continue;
             }
+            let permit = Arc::clone(&permits).acquire_owned().await?;
             let query = buffer[..size].to_vec();
             let socket = Arc::clone(&socket);
             let handler = Arc::clone(&self.handler);
@@ -122,22 +149,32 @@ impl<H: DnsHandler + 'static> DnsServer<H> {
             let (mut stream, _) = listener.accept().await?;
             let handler = Arc::clone(&self.handler);
             tokio::spawn(async move {
-                loop {
-                    let length = stream.read_u16().await? as usize;
-                    if length == 0 || length > MAX_DNS_PACKET {
-                        anyhow::bail!("invalid DNS TCP frame");
-                    }
-                    let mut query = vec![0u8; length];
-                    stream.read_exact(&mut query).await?;
-                    let Some(response) = answer(handler.as_ref(), query).await else {
-                        anyhow::bail!("DNS query could not be answered");
-                    };
-                    stream.write_u16(response.len() as u16).await?;
-                    stream.write_all(&response).await?;
+                if let Err(error) = handle_tcp_connection(&mut stream, handler.as_ref()).await {
+                    tracing::debug!(%error, "DNS TCP connection closed");
                 }
-                #[allow(unreachable_code)]
-                Ok::<(), anyhow::Error>(())
+                if let Err(error) = stream.shutdown().await {
+                    tracing::debug!(%error, "DNS TCP shutdown failed");
+                }
             });
         }
+    }
+}
+
+async fn handle_tcp_connection<H: DnsHandler + ?Sized>(
+    stream: &mut tokio::net::TcpStream,
+    handler: &H,
+) -> Result<()> {
+    loop {
+        let length = stream.read_u16().await? as usize;
+        if length == 0 || length > MAX_DNS_PACKET {
+            anyhow::bail!("invalid DNS TCP frame");
+        }
+        let mut query = vec![0u8; length];
+        stream.read_exact(&mut query).await?;
+        let Some(response) = answer(handler, query).await else {
+            anyhow::bail!("DNS query could not be answered");
+        };
+        stream.write_u16(response.len() as u16).await?;
+        stream.write_all(&response).await?;
     }
 }

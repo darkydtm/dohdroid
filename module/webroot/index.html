@@ -10,32 +10,123 @@
 	<div class="app">
 		<main class="main">
 			<section class="content">
+				<!-- Service status card -->
 				<section class="card daemon-card">
-					<div class="card-header"><div><p class="eyebrow">Service state</p><h2 class="card-title">Daemon</h2></div><span class="status-badge" id="daemonStatus">Checking...</span></div>
-					<div class="card-body"><p class="daemon-status-text" id="daemonStatusText">Checking daemon state...</p></div>
-				</section>
-				<section class="card">
-					<div class="card-header"><h2 class="card-title">Resolver configuration</h2><span class="card-support">config.toml</span></div>
+					<div class="card-header">
+						<div>
+							<p class="eyebrow">Service state</p>
+							<h2 class="card-title">Daemon</h2>
+						</div>
+						<span class="status-badge" id="daemonStatus">Checking...</span>
+					</div>
 					<div class="card-body">
-						<div class="field"><label for="resolverUrl">DoH resolver URL</label><input id="resolverUrl" list="resolverHistory" value="" placeholder="Empty - use system DNS" aria-describedby="resolverError"><datalist id="resolverHistory"></datalist><span class="error" id="resolverError" role="alert"></span><div class="history-list" id="resolverHistoryList" aria-label="Saved servers"></div></div>
-						<div class="field"><label for="tunMode">DNS interception mode</label><select id="tunMode"><option value="off">Standard</option><option value="on">TUN - compatible with VPN</option></select></div>
-						<div class="field"><label for="killswitchMode">DNS killswitch</label><select id="killswitchMode"><option value="off">Allow DNS fallback</option><option value="on">Block DNS when DoH is unavailable</option></select></div>
-						<div class="actions"><button id="saveButton">Save changes</button><button class="tonal" id="testButton">Check daemon</button><button class="tonal" id="restartButton">Restart daemon</button></div>
+						<p class="daemon-status-text" id="daemonStatusText">Checking daemon state...</p>
 					</div>
 				</section>
+
+				<!-- Resolver settings: fields, validation messages, and saved history -->
 				<section class="card">
-					<div class="card-header"><h2 class="card-title">Runtime</h2><span class="card-support">Live</span></div>
-					<div class="metrics"><div class="metric"><div class="metric-value" id="queries">-</div><div class="metric-label">Queries</div></div><div class="metric"><div class="metric-value" id="errors">-</div><div class="metric-label">Errors</div></div></div>
-					<div class="card-body"><div class="field"><label for="fallback">Fallback mode</label><select id="fallback"><option>system</option><option>servfail</option><option>disabled</option></select></div><div class="field"><label for="timeout">Request timeout</label><input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError"><span class="error" id="timeoutError" role="alert"></span></div></div>
+					<div class="card-header">
+						<h2 class="card-title">Resolver configuration</h2>
+						<span class="card-support">config.toml</span>
+					</div>
+					<div class="card-body">
+						<!-- Resolver URL field and history -->
+						<div class="field">
+							<label for="resolverUrl">DoH resolver URL</label>
+							<input id="resolverUrl" list="resolverHistory" value="" placeholder="Empty - use system DNS" aria-describedby="resolverError">
+							<datalist id="resolverHistory"></datalist>
+							<span class="error" id="resolverError" role="alert"></span>
+							<div class="history-list" id="resolverHistoryList" aria-label="Saved servers"></div>
+						</div>
+						<!-- DNS behavior fields -->
+						<div class="field">
+							<label for="tunMode">DNS interception mode</label>
+							<select id="tunMode">
+								<option value="off">Standard</option>
+								<option value="on">TUN - compatible with VPN</option>
+							</select>
+						</div>
+						<div class="field">
+							<label for="killswitchMode">DNS killswitch</label>
+							<select id="killswitchMode">
+								<option value="off">Allow DNS fallback</option>
+								<option value="on">Block DNS when DoH is unavailable</option>
+							</select>
+						</div>
+						<div class="actions">
+							<button id="saveButton">Save changes</button>
+							<button class="tonal" id="testButton">Check daemon</button>
+							<button class="tonal" id="restartButton">Restart daemon</button>
+						</div>
+					</div>
 				</section>
+
+				<!-- Runtime metrics and controls -->
+				<section class="card">
+					<div class="card-header">
+						<h2 class="card-title">Runtime</h2>
+						<span class="card-support">Live</span>
+					</div>
+					<div class="metrics">
+						<div class="metric">
+							<div class="metric-value" id="queries">-</div>
+							<div class="metric-label">Queries</div>
+						</div>
+						<div class="metric">
+							<div class="metric-value" id="errors">-</div>
+							<div class="metric-label">Errors</div>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="field">
+							<label for="fallback">Fallback mode</label>
+							<select id="fallback">
+								<option>system</option>
+								<option>servfail</option>
+								<option>disabled</option>
+							</select>
+						</div>
+						<div class="field">
+							<label for="timeout">Request timeout</label>
+							<input id="timeout" value="5000 ms" inputmode="numeric" aria-describedby="timeoutError">
+							<span class="error" id="timeoutError" role="alert"></span>
+						</div>
+					</div>
+				</section>
+
+				<!-- Appearance controls -->
 				<section class="card palette-card" aria-labelledby="paletteTitle">
-					<div class="card-header"><div><p class="eyebrow">Appearance</p><h2 class="card-title" id="paletteTitle">Colors and palette</h2></div><span class="card-support">Material 3</span></div>
+					<div class="card-header">
+						<div>
+							<p class="eyebrow">Appearance</p>
+							<h2 class="card-title" id="paletteTitle">Colors and palette</h2>
+						</div>
+						<span class="card-support">Material 3</span>
+					</div>
 					<div class="card-body palette-body">
-						<div class="field palette-select"><label for="themeMode">Palette</label><select id="themeMode"><option value="white">White</option><option value="dark" selected>Dark</option><option value="black">AMOLED black</option></select></div>
-						<label class="material-colors-toggle" for="materialColors"><span class="toggle-copy"><strong>Material colors</strong><small>Use color accents across surfaces and controls</small></span><input id="materialColors" type="checkbox" checked><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span></label>
+						<div class="field palette-select">
+							<label for="themeMode">Palette</label>
+							<select id="themeMode">
+								<option value="white">White</option>
+								<option value="dark" selected>Dark</option>
+								<option value="black">AMOLED black</option>
+							</select>
+						</div>
+						<label class="material-colors-toggle" for="materialColors">
+							<span class="toggle-copy">
+								<strong>Material colors</strong>
+								<small>Use color accents across surfaces and controls</small>
+							</span>
+							<input id="materialColors" type="checkbox" checked>
+							<span class="switch-track" aria-hidden="true">
+								<span class="switch-thumb"></span>
+							</span>
+						</label>
 					</div>
 				</section>
 			</section>
+			<!-- Service log and build details -->
 			<div class="log" id="log"></div>
 			<footer class="build-info" id="buildInfo">Build: unknown</footer>
 		</main>

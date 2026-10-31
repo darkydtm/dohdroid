@@ -10,7 +10,8 @@ pub struct DohClient {
     clients: Mutex<HashMap<ClientKey, Client>>,
 }
 impl DohClient {
-    pub fn new() -> Result<Self> {
+    // Keep the resolver argument to preserve the public constructor contract.
+    pub fn new(_resolvers: &[ResolverConfig]) -> Result<Self> {
         Ok(Self {
             clients: Mutex::new(HashMap::new()),
         })
@@ -29,9 +30,8 @@ impl DohClient {
             connect_timeout,
             request_timeout,
         );
-        let mut clients = self.clients.lock().unwrap();
-        if let Some(client) = clients.get(&key) {
-            return Ok(client.clone());
+        if let Some(client) = self.clients.lock().unwrap().get(&key).cloned() {
+            return Ok(client);
         }
         let mut builder = Client::builder()
             .user_agent("dohd/0.1")
@@ -51,9 +51,9 @@ impl DohClient {
                 .collect::<Result<Vec<_>>>()?;
             builder = builder.resolve_to_addrs(host, &addresses);
         }
-        let client = builder.build()?;
-        clients.insert(key, client.clone());
-        Ok(client)
+        let built_client = builder.build()?;
+        let mut clients = self.clients.lock().unwrap();
+        Ok(clients.entry(key).or_insert(built_client).clone())
     }
 
     pub async fn resolve(

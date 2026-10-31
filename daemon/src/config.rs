@@ -78,48 +78,96 @@ pub enum ConfigError {
     Parse(#[from] toml::de::Error),
     #[error("serialize configuration: {0}")]
     Serialize(#[from] toml::ser::Error),
-    #[error("invalid configuration: {0}")]
-    Invalid(String),
+    #[error("invalid configuration ({code:?}): {message}")]
+    Invalid {
+        code: ConfigErrorCode,
+        message: String,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConfigErrorCode {
+    ListenAddress,
+    Timeout,
+    CacheCapacity,
+    ResolverName,
+    ResolverUrl,
+    BootstrapIp,
+}
+
+fn invalid(code: ConfigErrorCode, message: impl Into<String>) -> ConfigError {
+    ConfigError::Invalid {
+        code,
+        message: message.into(),
+    }
 }
 
 impl Config {
     pub fn validate(&self) -> Result<(), ConfigError> {
+        self.validate_address()?;
+        self.validate_timeouts()?;
+        self.validate_cache()?;
+        self.validate_resolvers()
+    }
+
+    fn validate_address(&self) -> Result<(), ConfigError> {
         if self.listen_address != "127.0.0.1" {
-            return Err(ConfigError::Invalid(
-                "listen_address must be 127.0.0.1".into(),
+            return Err(invalid(
+                ConfigErrorCode::ListenAddress,
+                "listen_address must be 127.0.0.1",
             ));
         }
+        Ok(())
+    }
+
+    fn validate_timeouts(&self) -> Result<(), ConfigError> {
         if self.connect_timeout_ms == 0
             || self.connect_timeout_ms > 60_000
             || self.request_timeout_ms == 0
             || self.request_timeout_ms > 60_000
         {
-            return Err(ConfigError::Invalid(
-                "timeouts must be between 1 and 60000 ms".into(),
+            return Err(invalid(
+                ConfigErrorCode::Timeout,
+                "timeouts must be between 1 and 60000 ms",
             ));
         }
+        Ok(())
+    }
+
+    fn validate_cache(&self) -> Result<(), ConfigError> {
         if self.cache_capacity == 0 || self.cache_capacity > 1_000_000 {
-            return Err(ConfigError::Invalid(
-                "cache_capacity is out of bounds".into(),
+            return Err(invalid(
+                ConfigErrorCode::CacheCapacity,
+                "cache_capacity is out of bounds",
             ));
         }
+        Ok(())
+    }
+
+    fn validate_resolvers(&self) -> Result<(), ConfigError> {
         let mut names = std::collections::HashSet::new();
         for resolver in &self.resolvers {
             if resolver.name.is_empty() || !names.insert(&resolver.name) {
-                return Err(ConfigError::Invalid(
-                    "resolver names must be unique and non-empty".into(),
+                return Err(invalid(
+                    ConfigErrorCode::ResolverName,
+                    "resolver names must be unique and non-empty",
                 ));
             }
-            let url = Url::parse(&resolver.url).map_err(|e| ConfigError::Invalid(e.to_string()))?;
+            let url = Url::parse(&resolver.url)
+                .map_err(|error| invalid(ConfigErrorCode::ResolverUrl, error.to_string()))?;
             if url.scheme() != "https" || url.host_str().is_none() {
-                return Err(ConfigError::Invalid(format!(
-                    "resolver {} must use HTTPS",
-                    resolver.name
-                )));
+                return Err(invalid(
+                    ConfigErrorCode::ResolverUrl,
+                    format!("resolver {} must use HTTPS", resolver.name),
+                ));
             }
             for ip in &resolver.bootstrap_ips {
-                ip.parse::<IpAddr>()
-                    .map_err(|_| ConfigError::Invalid(format!("invalid bootstrap IP: {ip}")))?;
+                ip.parse::<IpAddr>().map_err(|_| {
+                    invalid(
+                        ConfigErrorCode::BootstrapIp,
+                        format!("invalid bootstrap IP: {ip}"),
+                    )
+                })?;
             }
         }
         Ok(())
@@ -148,29 +196,32 @@ fn normalize_history(history: impl IntoIterator<Item = String>) -> Vec<String> {
         .collect()
 }
 
-fn read_config(path: &Path) -> Result<Config, ConfigError> {
-    let mut config: Config = toml::from_str(&fs::read_to_string(path)?)?;
-    config.resolver_history = normalize_history(config.resolver_history);
-    config.validate()?;
-    Ok(config)
-}
-
 impl ConfigStore {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
         let path = path.as_ref().to_path_buf();
-        let config = read_config(&path)?;
+        let mut config: Config = toml::from_str(&fs::read_to_string(&path)?)?;
+        config.resolver_history = normalize_history(config.resolver_history);
+        config.validate()?;
         Ok(Self {
             path,
             current: Arc::new(RwLock::new(config)),
         })
     }
     pub fn snapshot(&self) -> Config {
-        self.current.read().unwrap().clone()
+        self.current
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
     pub fn replace(&self, mut config: Config) -> Result<(), ConfigError> {
         config.validate()?;
-        let mut current = self.current.write().unwrap();
-        config.resolver_history = normalize_history(current.resolver_history.clone());
+        let previous_history = self
+            .current
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .resolver_history
+            .clone();
+        config.resolver_history = normalize_history(previous_history);
 
         for resolver in config.resolvers.iter().filter(|resolver| resolver.enabled) {
             config.resolver_history.retain(|url| url != &resolver.url);
@@ -181,12 +232,20 @@ impl ConfigStore {
         let temp = self.path.with_extension("toml.tmp");
         fs::write(&temp, data)?;
         fs::rename(&temp, &self.path)?;
-        *current = config;
+        *self
+            .current
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = config;
         Ok(())
     }
     pub fn reload(&self) -> Result<(), ConfigError> {
-        let config = read_config(&self.path)?;
-        *self.current.write().unwrap() = config;
+        let mut config: Config = toml::from_str(&fs::read_to_string(&self.path)?)?;
+        config.resolver_history = normalize_history(config.resolver_history);
+        config.validate()?;
+        *self
+            .current
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = config;
         Ok(())
     }
 }
