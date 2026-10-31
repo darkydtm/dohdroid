@@ -64,23 +64,6 @@ impl DnsCache {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::DnsCache;
-    use std::time::Duration;
-
-    #[test]
-    fn evicts_least_recently_used_entry() {
-        let mut cache = DnsCache::new(2);
-        cache.insert(b"a".to_vec(), b"A".to_vec(), Duration::from_secs(60));
-        cache.insert(b"b".to_vec(), b"B".to_vec(), Duration::from_secs(60));
-        assert_eq!(cache.get(b"a"), Some(b"A".to_vec()));
-        cache.insert(b"c".to_vec(), b"C".to_vec(), Duration::from_secs(60));
-        assert_eq!(cache.get(b"a"), Some(b"A".to_vec()));
-        assert_eq!(cache.get(b"b"), None);
-    }
-}
-
 fn cache_key(query: &[u8]) -> Option<Vec<u8>> {
     let mut message = Message::from_vec(query).ok()?;
     if message.queries().len() != 1 {
@@ -102,12 +85,14 @@ fn cache_ttl(response: &[u8]) -> Option<Duration> {
     Some(Duration::from_secs(u64::from(ttl.min(MAX_TTL_SECONDS))))
 }
 
+type InFlight = Arc<tokio::sync::Mutex<HashMap<Vec<u8>, Weak<tokio::sync::Mutex<()>>>>>;
+
 pub struct CachingHandler<H> {
     inner: H,
     cache: Arc<Mutex<DnsCache>>,
     enabled: bool,
     // Keep only weak per-key locks so idle keys do not grow this map forever.
-    in_flight: Arc<tokio::sync::Mutex<HashMap<Vec<u8>, Weak<tokio::sync::Mutex<()>>>>>,
+    in_flight: InFlight,
 }
 impl<H> CachingHandler<H> {
     pub fn new(inner: H, cache: Arc<Mutex<DnsCache>>, enabled: bool) -> Self {
@@ -131,47 +116,62 @@ impl<H: DnsHandler> DnsHandler for CachingHandler<H> {
         let Some(key) = key else {
             return self.inner.handle(query).await;
         };
-        loop {
-            if let Some(mut response) = self.cache.lock().unwrap().get(&key) {
-                response[..2].copy_from_slice(&query[..2]);
-                return Ok(response);
-            }
-            let key_lock = {
-                let mut in_flight = self.in_flight.lock().await;
-                in_flight.retain(|_, lock| lock.strong_count() > 0);
-                in_flight
-                    .entry(key.clone())
-                    .and_modify(|lock| {
-                        if lock.strong_count() == 0 {
-                            *lock = Weak::new();
-                        }
-                    })
-                    .or_insert_with(Weak::new);
-                let lock = in_flight
-                    .get(&key)
-                    .and_then(Weak::upgrade)
-                    .unwrap_or_else(|| {
-                        let lock = Arc::new(tokio::sync::Mutex::new(()));
-                        in_flight.insert(key.clone(), Arc::downgrade(&lock));
-                        lock
-                    });
-                lock
-            };
-            let _flight_guard = key_lock.lock().await;
-            if let Some(mut response) = self.cache.lock().unwrap().get(&key) {
-                response[..2].copy_from_slice(&query[..2]);
-                return Ok(response);
-            }
-            let result = self.inner.handle(query.clone()).await;
-            if let Ok(response) = &result {
-                if let Some(ttl) = cache_ttl(response) {
-                    self.cache
-                        .lock()
-                        .unwrap()
-                        .insert(key.clone(), response.clone(), ttl);
-                }
-            }
-            return result;
+        if let Some(mut response) = self.cache.lock().unwrap().get(&key) {
+            response[..2].copy_from_slice(&query[..2]);
+            return Ok(response);
         }
+        let key_lock = {
+            let mut in_flight = self.in_flight.lock().await;
+            in_flight.retain(|_, lock| lock.strong_count() > 0);
+            in_flight
+                .entry(key.clone())
+                .and_modify(|lock| {
+                    if lock.strong_count() == 0 {
+                        *lock = Weak::new();
+                    }
+                })
+                .or_insert_with(Weak::new);
+            let lock = in_flight
+                .get(&key)
+                .and_then(Weak::upgrade)
+                .unwrap_or_else(|| {
+                    let lock = Arc::new(tokio::sync::Mutex::new(()));
+                    in_flight.insert(key.clone(), Arc::downgrade(&lock));
+                    lock
+                });
+            lock
+        };
+        let _flight_guard = key_lock.lock().await;
+        if let Some(mut response) = self.cache.lock().unwrap().get(&key) {
+            response[..2].copy_from_slice(&query[..2]);
+            return Ok(response);
+        }
+        let result = self.inner.handle(query.clone()).await;
+        if let Ok(response) = &result {
+            if let Some(ttl) = cache_ttl(response) {
+                self.cache
+                    .lock()
+                    .unwrap()
+                    .insert(key.clone(), response.clone(), ttl);
+            }
+        }
+        result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DnsCache;
+    use std::time::Duration;
+
+    #[test]
+    fn evicts_least_recently_used_entry() {
+        let mut cache = DnsCache::new(2);
+        cache.insert(b"a".to_vec(), b"A".to_vec(), Duration::from_secs(60));
+        cache.insert(b"b".to_vec(), b"B".to_vec(), Duration::from_secs(60));
+        assert_eq!(cache.get(b"a"), Some(b"A".to_vec()));
+        cache.insert(b"c".to_vec(), b"C".to_vec(), Duration::from_secs(60));
+        assert_eq!(cache.get(b"a"), Some(b"A".to_vec()));
+        assert_eq!(cache.get(b"b"), None);
     }
 }
