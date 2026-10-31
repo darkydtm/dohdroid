@@ -12,6 +12,8 @@ cat > "$TMP/bin/tool" <<'SCRIPT'
 printf '%s %s\n' "${0##*/}" "$*" >> "$TEST_LOG"
 mode=${STUB_MODE:-success}
 case "$mode:$*" in
+	*' rule show'*) printf '%s\n' 'lookup 19053'; exit 0 ;;
+	*' route show table '*) printf '%s\n' 'default dev dohdtun0'; exit 0 ;;
 	rollback:*'-D OUTPUT'*|rollback:*' rule del '*|rollback:*' route del '*) exit 1 ;;
 	fail-tcp:*'-t mangle -A DOHD_TUN -p tcp'*) exit 1 ;;
 esac
