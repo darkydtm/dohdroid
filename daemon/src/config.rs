@@ -148,12 +148,17 @@ fn normalize_history(history: impl IntoIterator<Item = String>) -> Vec<String> {
         .collect()
 }
 
+fn read_config(path: &Path) -> Result<Config, ConfigError> {
+    let mut config: Config = toml::from_str(&fs::read_to_string(path)?)?;
+    config.resolver_history = normalize_history(config.resolver_history);
+    config.validate()?;
+    Ok(config)
+}
+
 impl ConfigStore {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
         let path = path.as_ref().to_path_buf();
-        let mut config: Config = toml::from_str(&fs::read_to_string(&path)?)?;
-        config.resolver_history = normalize_history(config.resolver_history);
-        config.validate()?;
+        let config = read_config(&path)?;
         Ok(Self {
             path,
             current: Arc::new(RwLock::new(config)),
@@ -180,9 +185,7 @@ impl ConfigStore {
         Ok(())
     }
     pub fn reload(&self) -> Result<(), ConfigError> {
-        let mut config: Config = toml::from_str(&fs::read_to_string(&self.path)?)?;
-        config.resolver_history = normalize_history(config.resolver_history);
-        config.validate()?;
+        let config = read_config(&self.path)?;
         *self.current.write().unwrap() = config;
         Ok(())
     }
